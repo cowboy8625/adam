@@ -1,4 +1,9 @@
 fn main() {
-  let foo = 10;
-  print(foo);
+  let num = {
+    let i = 123;
+    let j = 321;
+    i + j
+  };
+
+  print(num);
 }
