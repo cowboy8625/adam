@@ -1,20 +1,24 @@
-import {
-  Compile,
-  AstVisitor
-} from "./../codegen/rust/mod.ts";
+import { FuncParam, AstVisitor, Compile } from "./../codegen/rust/mod.ts";
 
 export type Statement = ExprStmt | LetBinding;
-export type Expression = IfElse | Binary | Number | Boolean | Ident;
-export type Op = Add;
+export type Expression =
+  | Array
+  | IfElse
+  | Binary
+  | Unary
+  | Number
+  | Boolean
+  | Ident;
+export type Op = Add | Sub | Mul | Div;
 
 // fn <name>(<params>) {
 //  <Block>
 // }
 export class Function implements Compile {
   name: Ident;
-  params: Array<Ident>;
+  params: Ident[];
   block: Block;
-  constructor(name: Ident, params: Array<Ident>, block: Block) {
+  constructor(name: Ident, params: Ident[], block: Block) {
     this.name = name;
     this.params = params;
     this.block = block;
@@ -30,9 +34,13 @@ export class Function implements Compile {
 //  <Statement>...
 // }
 export class Block implements Compile {
-  block: Array<Statement | Expression>;
-  constructor(block: Array<Statement | Expression>) {
+  block: (FuncParam | Statement | Expression)[];
+  constructor(block: (FuncParam | Statement | Expression)[]) {
     this.block = block;
+  }
+
+  pushToStart(stmt: FuncParam | Statement | Expression) {
+    this.block.unshift(stmt);
   }
 
   accept(visitor: AstVisitor): string {
@@ -69,11 +77,27 @@ export class ExprStmt implements Compile {
 }
 
 // <Expression> <Op> <Expression>
+export class Array implements Compile {
+  expressions: Expression[];
+  constructor(expressions: Expression[]) {
+    this.expressions = expressions;
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+// <Expression> <Op> <Expression>
 export class IfElse implements Compile {
   condition: Expression;
   thenBranch: Block;
   elseBranch: Block | IfElse | undefined;
-  constructor(condition: Expression, thenBranch: Block, elseBranch: Block | IfElse | undefined) {
+  constructor(
+    condition: Expression,
+    thenBranch: Block,
+    elseBranch: Block | IfElse | undefined,
+  ) {
     this.condition = condition;
     this.thenBranch = thenBranch;
     this.elseBranch = elseBranch;
@@ -93,6 +117,20 @@ export class Binary implements Compile {
     this.left = left;
     this.right = right;
     this.op = op;
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+// <Op> <Expression>
+export class Unary implements Compile {
+  op: Op;
+  right: Expression;
+  constructor(op: Op, right: Expression) {
+    this.op = op;
+    this.right = right;
   }
 
   accept(visitor: AstVisitor): string {
@@ -139,6 +177,39 @@ export class Add implements Compile {
   op: string;
   constructor() {
     this.op = "+";
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+export class Sub implements Compile {
+  op: string;
+  constructor() {
+    this.op = "-";
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+export class Mul implements Compile {
+  op: string;
+  constructor() {
+    this.op = "-";
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+export class Div implements Compile {
+  op: string;
+  constructor() {
+    this.op = "/";
   }
 
   accept(visitor: AstVisitor): string {

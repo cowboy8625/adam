@@ -1,16 +1,16 @@
 import { print } from "./../util.ts";
 import { either, left, oneOrMore, right } from "./../combine/combin.js";
 import {
-  ExprIfElse,
   ExprBinary,
   ExprCall,
   ExprFunc,
+  ExprIfElse,
+  exprKind,
   ExprLet,
+  ValueBoolean,
   ValueIdent,
   ValueNumber,
   ValueString,
-  ValueBoolean,
-  exprKind,
 } from "./expr.js";
 import { lexer, tokenKind } from "./../lexer/lexer.js";
 

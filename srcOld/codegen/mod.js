@@ -51,7 +51,10 @@ const codeGenFromStmt = (stmt) => {
     case exprKind.IfElse:
       return codeGenFromExprIfElse(stmt);
     default:
-      return console.assert(false, `codeGenFromStmt ${exprKind.from(stmt.kind)}`);
+      return console.assert(
+        false,
+        `codeGenFromStmt ${exprKind.from(stmt.kind)}`,
+      );
   }
 };
 
@@ -68,7 +71,6 @@ const codeGenFromExprIfElse = (ifElseStmt) => {
     default:
       elseBranch = `else {${codeGenFromBody(ifElseStmt.elseBranch)}\n}`;
       break;
-
   }
   return `if ${condition} {
   ${thenBranch};

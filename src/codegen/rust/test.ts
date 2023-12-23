@@ -1,36 +1,32 @@
-import {
-  Compile,
-  AstVisitor,
-  Compiler,
-} from "./mod.ts";
+import { Compiler } from "./mod.ts";
 
 import {
-  Function,
-  Block,
-  LetBinding,
-  ExprStmt,
-  IfElse,
-  Binary,
-  Number,
-  Boolean,
-  Ident,
+  // Div,
+  // Mul,
+  Sub,
   Add,
+  Unary,
+  Binary,
+  Block,
+  Boolean,
+  ExprStmt,
+  Function,
+  Ident,
+  IfElse,
+  LetBinding,
+  Number,
 } from "./../../ast/mod.ts";
 
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 Deno.test("code-gen-Funciton", () => {
-
   const op = new Add();
-
-  const leftNum   = new Number("123");
-  const rightNum  = new Number("321");
-
-  const expr  = new Binary(leftNum, rightNum, op);
-  const block = new Block([expr]);
-
   const xIdent = new Ident("x");
   const yIdent = new Ident("y");
+
+  const expr = new Binary(xIdent, yIdent, op);
+  const block = new Block([expr]);
+
   const params = [xIdent, yIdent];
 
   const funcIdent = new Ident("add");
@@ -39,8 +35,10 @@ Deno.test("code-gen-Funciton", () => {
 
   const compiler = new Compiler();
   const left = compiler.compile(func);
-  const right = `fn add(x, y) -> Object {
-Object::Number(123) + Object::Number(321)
+  const right = `fn add(args: Vec<Object>) -> Object {
+let x = args[0].clone();
+let y = args[1].clone();
+x + y
 }`;
   assertEquals(right, left);
 });
@@ -114,6 +112,16 @@ Deno.test("code-gen-Binary", () => {
   const compiler = new Compiler();
   const left = compiler.compile(bin);
   const right = `a + b`;
+  assertEquals(right, left);
+});
+
+Deno.test("code-gen-Unary", () => {
+  const op = new Sub();
+  const num = new Number("123");
+  const unary = new Unary(op, num);
+  const compiler = new Compiler();
+  const left = compiler.compile(unary);
+  const right = `-Object::Number(123)`;
   assertEquals(right, left);
 });
 

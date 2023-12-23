@@ -1,73 +1,57 @@
-use std::collections::HashMap;
 use std::ops::Add;
-use std::fmt;
-use std::rc::Rc;
-use std::any::Any;
+use std::slice::Iter;
 
-type Record = HashMap<Object, Object>;
-
-trait FnObject: fmt::Debug {
-    fn call(&mut self, args: Vec<Object>) -> Object;
-    fn equal(&self, other: &dyn FnObject) -> bool;
-    fn as_any(&self) -> &dyn Any;
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Record {
+    inner: Vec<(Object, Object)>
 }
 
-#[derive(Debug, PartialEq)]
-struct FnAdd;
-impl FnObject for FnAdd {
-    fn call(&mut self, args: Vec<Object>) -> Object {
-        args[0].clone() + args[1].clone()
+impl Record {
+    pub fn new() -> Self {
+        Self{inner:vec![]}
     }
-    fn equal(&self, other: &dyn FnObject) -> bool {
-        other.as_any().downcast_ref::<Self>().map_or(false, |i| self==i)
+
+    pub fn insert(&mut self, key: Object, value: Object) {
+        self.inner.push((key, value));
     }
-    fn as_any(&self) -> &dyn Any {
-        self
+
+    pub fn get(&self, key: &Object) -> Option<&Object> {
+        self.inner.iter().find(|(obj_key, _)| key == obj_key).map(|(k, v)| v)
     }
 }
 
-#[derive(Clone)]
-struct Function(pub Rc<dyn FnObject>);
-
-impl Function {
-    fn call(&mut self, args: Vec<Object>) -> Object {
-        Rc::get_mut(&mut self.0).map(|i| i.call(args)).unwrap_or(Object::Null)
-    }
-}
-
-impl std::fmt::Debug for Function {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.0)
-    }
-}
-
-impl PartialEq for Function {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.equal(&*other.0)
-    }
-}
-
-impl Eq for Function {}
-
-// fn(params) -> type
-
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Object {
     Null,
     Boolean(bool),
-    Number(usize),
+    Number(f64),
     String(String),
-    Array(Box<Self>),
-    Record(usize),
-    Function(usize),
+    Array(Vec<Self>),
+    Record(Record),
+    Function(fn(Vec<Object>) -> Object),
 }
 
 impl Object {
-    pub fn unwrap_boolean_or_default() {
+    pub fn unwrap_boolean_or_default(&self) -> bool {
         match self {
-            Self::Boolean(b) => b,
+            Self::Boolean(b) => *b,
+            Self::Number(num) => *num != 0,
             Self::String(string) => string.is_empty(),
             _ => false,
+        }
+    }
+
+    pub fn iter(&self) -> Iter<Object> {
+        match self {
+            Self::Array(array) => array.iter(),
+            _ => panic!(""),
+        }
+    }
+
+    pub fn call(&self, args: Vec<Object>) -> Object {
+        match self {
+            Self::Function(func) => func(args),
+            obj => panic!("{:?} is not callable", obj),
         }
     }
 }
@@ -83,46 +67,3 @@ impl Add for Object {
         }
     }
 }
-
-fn execute_object(obj: Object, fl: &mut Vec<Function>, rl: &mut Vec<Record>) {
-    match obj {
-        Object::Function(func_id) => {
-            let one = Object::Number(1);
-            let two = Object::Number(2);
-            println!("{:?}", fl[func_id].call(vec![one, two]));
-        },
-        Object::Record(rec_id) => {
-            let record = &rl[rec_id];
-            println!("{record:?}");
-        }
-        _ => unreachable!(),
-    }
-}
-
-fn main() {
-    let mut function_list = vec![
-        Function(Rc::new(FnAdd))
-    ];
-
-    let mut hashmap = HashMap::new();
-    hashmap.insert(Object::String(String::from("count")), Object::Number(100));
-
-    let mut record_list = vec![
-        hashmap
-    ];
-
-    
-
-
-
-
-    let object = Object::Function(0);
-    execute_object(object, &mut function_list, &mut record_list);
-    let object = Object::Record(0);
-    execute_object(object, &mut function_list, &mut record_list);
-}
-
-fn adam_main(fl: &mut Vec<Object>, rl: &mut Vec<Object>) {
-
-}
-

@@ -1,9 +1,3 @@
 fn main() {
-  let num = {
-    let i = 123;
-    let j = 321;
-    i + j
-  };
-
   print(num);
 }

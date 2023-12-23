@@ -41,27 +41,48 @@ export const tokenKind = Object.freeze({
   Eof: auto(),
   from: (num) => {
     switch (num) {
-      case 0 : return "String";
-      case 1 : return "Number";
-      case 2 : return "Ident";
-      case 3 : return "True";
-      case 4 : return "False";
-      case 5 : return "LeftParan";
-      case 6 : return "RightParan";
-      case 7 : return "LeftBrace";
-      case 8 : return "RightBrace";
-      case 9 : return "Plus";
-      case 10: return "SimiColon";
-      case 11: return "Comma";
-      case 12: return "Eq";
-      case 13: return "Dash";
-      case 14: return "Let";
-      case 15: return "Fn";
-      case 16: return "If";
-      case 17: return "Else";
-      case 18: return "Return";
-      case 19: return "Eof";
-      default: null;
+      case 0:
+        return "String";
+      case 1:
+        return "Number";
+      case 2:
+        return "Ident";
+      case 3:
+        return "True";
+      case 4:
+        return "False";
+      case 5:
+        return "LeftParan";
+      case 6:
+        return "RightParan";
+      case 7:
+        return "LeftBrace";
+      case 8:
+        return "RightBrace";
+      case 9:
+        return "Plus";
+      case 10:
+        return "SimiColon";
+      case 11:
+        return "Comma";
+      case 12:
+        return "Eq";
+      case 13:
+        return "Dash";
+      case 14:
+        return "Let";
+      case 15:
+        return "Fn";
+      case 16:
+        return "If";
+      case 17:
+        return "Else";
+      case 18:
+        return "Return";
+      case 19:
+        return "Eof";
+      default:
+        null;
     }
   },
 });

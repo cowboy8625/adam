@@ -12,16 +12,26 @@ export const exprKind = Object.freeze({
   Call: auto(),
   from: (num) => {
     switch (num) {
-      case 0: return "ValueBoolean";
-      case 1: return "ValueNumber";
-      case 2: return "ValueString";
-      case 3: return "ValueIdent";
-      case 4: return "ExprBinary";
-      case 5: return "ExprIfElse";
-      case 6: return "ExprLet";
-      case 7: return "ExprFn";
-      case 8: return "ExprCall";
-      default: return null;
+      case 0:
+        return "ValueBoolean";
+      case 1:
+        return "ValueNumber";
+      case 2:
+        return "ValueString";
+      case 3:
+        return "ValueIdent";
+      case 4:
+        return "ExprBinary";
+      case 5:
+        return "ExprIfElse";
+      case 6:
+        return "ExprLet";
+      case 7:
+        return "ExprFn";
+      case 8:
+        return "ExprCall";
+      default:
+        return null;
     }
   },
 });
@@ -111,9 +121,7 @@ export class ExprIfElse {
   }
 
   toString() {
-    return `${
-      exprKind.from(this.kind)
-    }(${this.condition.item.lexme}
+    return `${exprKind.from(this.kind)}(${this.condition.item.lexme}
       ${this.thenBranch}
       ${this.elseBranch}
     )`;

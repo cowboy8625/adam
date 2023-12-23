@@ -2,7 +2,7 @@ import lexer from "./lexer/lexer.js";
 import { parser } from "./parse/parser.js";
 import { codeGen } from "./codegen/mod.js";
 
-const compileWithRustC = async fileName => {
+const compileWithRustC = async (fileName) => {
   let rustc = new Deno.Command("rustc", { args: [fileName] });
   let { code, stdout, stderr } = await rustc.output();
   console.log(new TextDecoder().decode(stdout));
@@ -12,7 +12,7 @@ const compileWithRustC = async fileName => {
   }
 };
 
-const fmtRustFile = async fileName => {
+const fmtRustFile = async (fileName) => {
   let rustfmt = new Deno.Command("rustfmt", { args: [fileName] });
   let { code, stdout, stderr } = await rustfmt.output();
   console.log(new TextDecoder().decode(stdout));
