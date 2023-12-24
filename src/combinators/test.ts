@@ -18,6 +18,34 @@ Deno.test("combinators-number", () => {
   assertEquals(right, { src, value });
 });
 
+Deno.test("combinators-left", () => {
+  const { src, value } = Parse.left(
+    Parse.number,
+    Parse.tag(")"),
+  )("100)").unwrap();
+  const right: ParserResultSuccess<number> = { src: "", value: 100 };
+  assertEquals(right, { src, value });
+});
+
+Deno.test("combinators-surround", () => {
+  const { src, value } = Parse.surround(
+    Parse.tag("("),
+    Parse.number,
+    Parse.tag(")"),
+  )("(100)").unwrap();
+  const right: ParserResultSuccess<number> = { src: "", value: 100 };
+  assertEquals(right, { src, value });
+});
+
+Deno.test("combinators-right", () => {
+  const { src, value } = Parse.right(
+    Parse.tag("("),
+    Parse.number,
+  )("(100)").unwrap();
+  const right: ParserResultSuccess<number> = { src: ")", value: 100 };
+  assertEquals(right, { src, value });
+});
+
 Deno.test("combinators-tag", () => {
   const result = Parse.tag("foo")("foo");
   const { src, value } = result.unwrap();

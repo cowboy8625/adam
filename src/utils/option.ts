@@ -7,7 +7,7 @@ export type None = {
   tag: string;
 };
 
-export class Option<T> {
+export default class Option<T> {
   value: Some<T> | None;
   constructor(value: Some<T> | None) {
     this.value = value;
