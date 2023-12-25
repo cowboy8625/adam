@@ -13,6 +13,7 @@ import {
 } from "../ast/mod.ts";
 import Parse from "../combinators/mod.ts";
 import type {
+  Parser,
   ParserResult,
   ParserResultSuccess,
 } from "../combinators/mod.types.ts";
@@ -32,17 +33,16 @@ export function parse(src: string): Result<Function[], ParserError[]> {
   return Result.ok(value);
 }
 
-function identParser(i: ParserResultSuccess<string>): ParserResult<Ident> {
-  return Parse.right(
-    Parse.optional(Parse.whitespace),
-    Parse.identifier,
-  )(i.src).map(({ src, value }) => ({
-    src,
-    value: new Ident(value),
-  }));
+export function identParser(
+  i: ParserResultSuccess<string>,
+): ParserResult<Ident> {
+  return Parse.map(
+    Parse.right(Parse.optional(Parse.whitespace), Parse.identifier),
+    (value) => new Ident(value),
+  )(i.src);
 }
 
-function functionParser(src: string): ParserResult<Function> {
+export function functionParser(src: string): ParserResult<Function> {
   const result = Parse.tag<string>("fn")(src)
     .andThen(identParser)
     .andThen(paramParser)
@@ -56,11 +56,10 @@ function functionParser(src: string): ParserResult<Function> {
   return result;
 }
 
-function paramParser({
+export function paramParser({
   src,
   value: name,
 }: ParserResultSuccess<Ident>): ParserResult<[Ident, Ident[]]> {
-  console.log("param", src);
   return Parse.surround(
     Parse.tag("("),
     Parse.many0(
@@ -77,7 +76,7 @@ function paramParser({
   }));
 }
 
-function blockParser({
+export function blockParser({
   src,
   value: [name, params],
 }: ParserResultSuccess<[Ident, Ident[]]>): ParserResult<
@@ -93,18 +92,32 @@ function blockParser({
   }));
 }
 
-function expressionParser(src: string): ParserResult<Expression> {
+export function expressionParser(src: string): ParserResult<Expression> {
   return binaryParser(src);
 }
 
-function binaryParser(src: string): ParserResult<Expression> {
-  const result = Parse.pair<[Expression, Op, Expression]>(
-    primaryParser,
-    Parse.oneOf([new Add(), new Sub()]),
-    primaryParser,
+export function binaryParser(src: string): ParserResult<Expression> {
+  const opParser: Parser<string> = Parse.right(
+    Parse.optional(Parse.whitespace),
+    Parse.oneOf(Parse.tag("+"), Parse.tag("-")),
   );
+  const mapStringToOp = (op: string) => {
+    switch (op) {
+      case "+":
+        return new Add();
+      case "-":
+        return new Sub();
+      default:
+        std.unreachable();
+    }
+  };
+  const result = Parse.pair3<Expression, Op, Expression>(
+    primaryParser,
+    Parse.map(opParser, mapStringToOp),
+    primaryParser,
+  )(src);
   if (result.isErr()) {
-    return result;
+    return Result.err(result.unwrapErr());
   }
   const {
     src: srcNew,
@@ -112,13 +125,13 @@ function binaryParser(src: string): ParserResult<Expression> {
   } = result.unwrap();
   return Result.ok({
     src: srcNew,
-    value: new Binary(lhs, op, rhs),
+    value: new Binary(lhs as Expression, rhs as Expression, op as Op),
   });
 }
 
-function primaryParser(src: string): ParserResult<Expression> {
-  return Parse.identifier(src).map(({ src, value }) => ({
-    src,
-    value: new Ident(value),
-  }));
+export function primaryParser(src: string): ParserResult<Expression> {
+  return Parse.map(
+    Parse.right(Parse.optional(Parse.whitespace), Parse.identifier),
+    (value) => new Ident(value),
+  )(src);
 }

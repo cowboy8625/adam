@@ -12,7 +12,7 @@ function number(src: string): ParserResult<number> {
   }
 
   let index = 0;
-  while (isDigit(src[index])) {
+  while (isDigit(src.charAt(index))) {
     index += 1;
   }
 
@@ -28,7 +28,7 @@ function string(src: string): ParserResult<string> {
   }
 
   let index = 1;
-  while (src[index] !== '"') {
+  while (src.charAt(index) !== '"') {
     index += 1;
   }
   index += 1;
@@ -49,7 +49,7 @@ function identifier(src: string): ParserResult<string> {
 
   let index = 1;
 
-  while (/^[a-zA-Z0-9_]+$/.test(src[index])) {
+  while (/^[a-zA-Z0-9_]+$/.test(src.charAt(index))) {
     index += 1;
   }
 
@@ -98,7 +98,7 @@ function whitespace(src: string): ParserResult<string> {
   }
 
   let index = 0;
-  while (/\s/.test(src[index])) {
+  while (/\s/.test(src.charAt(index))) {
     index += 1;
   }
 
@@ -164,8 +164,10 @@ function optional<T>(parser: Parser<T>): Parser<Option<T>> {
   };
 }
 
-function pair<T>(...parsers: Parser<T>[]): Parser<T[]> {
-  return (src: string): ParserResult<T[]> => {
+function pair3<T1, T2, T3>(
+  ...parsers: [Parser<T1>, Parser<T2>, Parser<T3>]
+): Parser<(T1 | T2 | T3)[]> {
+  return (src: string): ParserResult<(T1 | T2 | T3)[]> => {
     const results = [];
     for (const parser of parsers) {
       const result = parser(src);
@@ -195,7 +197,22 @@ function oneOf<T>(...parsers: Parser<T>[]): Parser<T> {
   };
 }
 
+function map<U, T>(parser: Parser<T>, fn: (value: T) => U): Parser<U> {
+  return (src: string): ParserResult<U> => {
+    const result = parser(src);
+    if (result.isErr()) {
+      return Result.err(src);
+    }
+    const { src: newSrc, value } = result.unwrap();
+    return Result.ok({
+      src: newSrc,
+      value: fn(value),
+    });
+  };
+}
+
 export default {
+  map,
   left,
   right,
   surround,
@@ -206,6 +223,6 @@ export default {
   whitespace,
   identifier,
   optional,
-  pair,
+  pair3,
   oneOf,
 };
