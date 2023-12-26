@@ -1,28 +1,34 @@
 import { auto, print } from "./../util.ts";
 
 export const exprKind = Object.freeze({
-  ValueNumber: auto(true),
+  ValueBoolean: auto(true),
+  ValueNumber: auto(),
   ValueString: auto(),
   ValueIdent: auto(),
   Binary: auto(),
+  IfElse: auto(),
   Let: auto(),
   Fn: auto(),
   Call: auto(),
   from: (num) => {
     switch (num) {
       case 0:
-        return "ValueNumber";
+        return "ValueBoolean";
       case 1:
-        return "ValueString";
+        return "ValueNumber";
       case 2:
-        return "ValueIdent";
+        return "ValueString";
       case 3:
-        return "ExprBinary";
+        return "ValueIdent";
       case 4:
-        return "ExprLet";
+        return "ExprBinary";
       case 5:
-        return "ExprFn";
+        return "ExprIfElse";
       case 6:
+        return "ExprLet";
+      case 7:
+        return "ExprFn";
+      case 8:
         return "ExprCall";
       default:
         return null;
@@ -35,6 +41,10 @@ export class ExprCall {
     this.kind = exprKind.Call;
     this.name = name;
     this.args = args;
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
   }
 
   toString() {
@@ -50,10 +60,16 @@ export class ExprFunc {
     this.body = body;
   }
 
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
   toString() {
-    return `${
-      exprKind.from(this.kind)
-    }(${this.name}, ${this.params}, ${this.body})`;
+    return `${exprKind.from(this.kind)}(
+      name: ${this.name},
+      params: ${this.params.join(",\n\t")},
+      body: ${this.body.join(",\n\t")}\n
+)\n`;
   }
 }
 
@@ -62,6 +78,10 @@ export class ExprLet {
     this.kind = exprKind.Let;
     this.name = name;
     this.expr = expr;
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
   }
 
   toString() {
@@ -77,6 +97,10 @@ export class ExprBinary {
     this.op = op;
   }
 
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
   toString() {
     return `${
       exprKind.from(this.kind)
@@ -84,10 +108,49 @@ export class ExprBinary {
   }
 }
 
+export class ExprIfElse {
+  constructor(condition, thenBranch, elseBranch) {
+    this.kind = exprKind.IfElse;
+    this.condition = condition;
+    this.thenBranch = thenBranch;
+    this.elseBranch = elseBranch;
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
+  toString() {
+    return `${exprKind.from(this.kind)}(${this.condition.item.lexme}
+      ${this.thenBranch}
+      ${this.elseBranch}
+    )`;
+  }
+}
+
+export class ValueBoolean {
+  constructor(item) {
+    this.kind = exprKind.ValueBoolean;
+    this.item = item;
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
+  toString() {
+    return `${exprKind.from(this.kind)}( ${this.item.toString()} )`;
+  }
+}
+
 export class ValueNumber {
   constructor(item) {
     this.kind = exprKind.ValueNumber;
     this.item = item;
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
   }
 
   toString() {
@@ -101,6 +164,10 @@ export class ValueString {
     this.item = item;
   }
 
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
   toString() {
     return `${exprKind.from(this.kind)}( ${this.item.toString()} )`;
   }
@@ -110,6 +177,10 @@ export class ValueIdent {
   constructor(item) {
     this.kind = exprKind.ValueIdent;
     this.item = item;
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
   }
 
   toString() {

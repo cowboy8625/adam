@@ -1,4 +1,3 @@
 fn main() {
-  let foo = 10;
-  print(foo);
+  print(num);
 }

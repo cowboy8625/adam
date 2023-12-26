@@ -4,8 +4,10 @@ import {
   ExprBinary,
   ExprCall,
   ExprFunc,
+  ExprIfElse,
   exprKind,
   ExprLet,
+  ValueBoolean,
   ValueIdent,
   ValueNumber,
   ValueString,
@@ -15,7 +17,7 @@ import { lexer, tokenKind } from "./../lexer/lexer.js";
 export const parser = (tokens) => {
   return oneOrMore(
     func,
-  )(tokens)[1];
+  )(tokens);
 };
 
 const tokenParser = (exprKind, ...tokenKinds) => (tokens) =>
@@ -36,10 +38,11 @@ const nextIf = (tokens, fn) => {
 };
 
 const identParser = (tokens) => {
-  if (tokens[0].kind !== tokenKind.Ident) {
+  const [stream, ident] = nextIf(tokens, isNextToken(tokenKind.Ident));
+  if (!ident) {
     return [tokens, null];
   }
-  return [tokens.slice(1, tokens.length), tokens[0].lexme];
+  return [stream, ident.lexme];
 };
 
 const paramParser = (tokens) => {
@@ -176,7 +179,30 @@ const assignment = (tokens) => {
 const statement = (tokens) => either(assignment, exprStmt)(tokens);
 const exprStmt = (tokens) => left(expression, delimiter)(tokens);
 const delimiter = (tokens) => nextIf(tokens, isNextToken(tokenKind.SimiColon));
-const expression = (tokens) => either(func, term)(tokens);
+const expression = (tokens) => either(func, ifElseExpr, term)(tokens);
+
+const ifElseExpr = (tokens) => {
+  const [stream1, ifToken] = nextIf(tokens, isNextToken(tokenKind.If));
+  if (!ifToken) {
+    return [tokens, null];
+  }
+  const [stream2, condition] = expression(stream1);
+  console.assert(condition, "expected condition after 'if'");
+
+  const [stream3, thenBranch] = bodyParser(stream2);
+  console.assert(condition, "expected branch after 'if' condition");
+
+  const [stream4, elseToken] = nextIf(stream3, isNextToken(tokenKind.Else));
+  if (!elseToken) {
+    return [stream3, new ExprIfElse(condition, thenBranch, null)];
+  }
+  if (isNextToken(tokenKind.If)(stream4[0])) {
+    const [stream5, elseBranch] = ifElseExpr(stream4);
+    return [stream5, new ExprIfElse(condition, thenBranch, elseBranch)];
+  }
+  const [stream5, elseBranch] = bodyParser(stream4);
+  return [stream5, new ExprIfElse(condition, thenBranch, elseBranch)];
+};
 
 const term = (tokens) => {
   const [stream1, left] = call(tokens);
@@ -225,6 +251,9 @@ const primary = (tokens) => {
       return [tokens.slice(1, tokens.length), new ValueNumber(tokens[0])];
     case tokenKind.String:
       return [tokens.slice(1, tokens.length), new ValueString(tokens[0])];
+    case tokenKind.True:
+    case tokenKind.False:
+      return [tokens.slice(1, tokens.length), new ValueBoolean(tokens[0])];
     default:
       console.assert(false, `primary failed on ${tokens[0].toString()}`);
   }
