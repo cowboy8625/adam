@@ -25,7 +25,7 @@ import {
 import Result from "../utils/result.ts";
 
 Deno.test("parse bianary", () => {
-  const result = parse("fn add(x, y) { x + y }");
+  const result = parse("fn add(x, y) { x + y; }");
   assertEquals(
     result,
     Result.ok([
@@ -46,8 +46,8 @@ Deno.test("parse call", () => {
     result,
     Result.ok([
       new Function(
-        new Ident("add"),
-        [new Ident("x"), new Ident("y")],
+        new Ident("main"),
+        [],
         new Block([
           new ExprStmt(
             new Call(new Ident("add"), [new Ident("x"), new Ident("y")]),
