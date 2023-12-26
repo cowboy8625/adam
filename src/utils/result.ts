@@ -19,6 +19,13 @@ export default class Result<T, E> {
     return Result.err(this.value as E);
   }
 
+  public mapErr<U>(fn: (error: E) => Result<T, U>): Result<T, U> {
+    if (this.kind === "Err") {
+      return fn(this.value as E);
+    }
+    return Result.ok(this.value as T);
+  }
+
   public andThen<U>(fn: (value: T) => Result<U, E>): Result<U, E> {
     if (this.kind === "Ok") {
       return fn(this.value as T);
@@ -50,6 +57,20 @@ export default class Result<T, E> {
     throw new Error(
       `Result is Ok and cannot be unwrapped as an '${this.value}'`,
     );
+  }
+
+  public orElse<U>(fn: (error: E) => Result<T, U>): Result<T, U> {
+    if (this.kind === "Ok") {
+      return Result.ok(this.value as T);
+    }
+    return fn(this.value as E);
+  }
+
+  public or(other: Result<T, E>): Result<T, E> {
+    if (this.kind === "Ok") {
+      return Result.ok(this.value as T);
+    }
+    return other;
   }
 }
 

@@ -15,7 +15,7 @@ import {
   Ident,
   IfElse,
   Array,
-  LetBinding,
+  Let,
   Number,
   Op,
   Statement,
@@ -29,7 +29,7 @@ export interface AstVisitor {
   visitFunction(node: Function): string;
   visitFuncParam(node: FuncParam): string;
   visitBlock(node: Block): string;
-  visitLetBinding(node: LetBinding): string;
+  visitLet(node: Let): string;
   visitExprStmt(node: ExprStmt): string;
   visitArray(node: Array): string;
   visitIfElse(node: IfElse): string;
@@ -59,11 +59,12 @@ export class FuncParam implements Compile {
 export class Compiler implements AstVisitor {
   visitFunction(node: Function): string {
     const name = this.visit(node.name);
-    node.params.reverse().forEach((ident, index) => {
-      node.block.pushToStart(
-        new FuncParam(ident, node.params.length - index - 1),
-      );
-    });
+    // FIXME: Not sure how to fix this just yet
+    // node.params.reverse().forEach((ident, index) => {
+    //   node.block.pushToStart(
+    //     new FuncParam(ident, node.params.length - index - 1),
+    //   );
+    // });
     const block = this.visit(node.block);
     return `fn ${name}(args: Vec<Object>) -> Object ${block}`;
   }
@@ -82,18 +83,18 @@ ${stmts}
 }`;
   }
 
-  visitLetBinding(node: LetBinding): string {
+  visitLet(node: Let): string {
     const name = this.visit(node.name);
-    const stmt = this.visit(node.statement);
+    const stmt = this.visit(node.expression);
     return `let mut ${name} = ${stmt}`;
   }
 
   visitExprStmt(node: ExprStmt): string {
-    const stmt = this.visit(node.expression);
-    return `${stmt};`;
+    const expr = this.visit(node.expression);
+    return `${expr};`;
   }
 
-  visitArray(node: Array): string {
+  visitArray(_: Array): string {
     std.unimplemented("Array code gen not unimplemented yet");
   }
 
@@ -143,8 +144,8 @@ ${stmts}
       return this.visitFuncParam(node);
     } else if (node instanceof Block) {
       return this.visitBlock(node);
-    } else if (node instanceof LetBinding) {
-      return this.visitLetBinding(node);
+    } else if (node instanceof Let) {
+      return this.visitLet(node);
     } else if (node instanceof ExprStmt) {
       return this.visitExprStmt(node);
     } else if (node instanceof IfElse) {

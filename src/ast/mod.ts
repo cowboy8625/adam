@@ -1,11 +1,16 @@
 import { FuncParam, AstVisitor, Compile } from "./../codegen/rust/mod.ts";
 
-export type Statement = ExprStmt | LetBinding;
+("Hello world \0");
+
+export type Declaration = Function;
+export type Statement = ExprStmt;
 export type Expression =
+  | Let
   | Array
   | IfElse
   | Binary
   | Unary
+  | Call
   | Number
   | Boolean
   | Ident;
@@ -34,12 +39,12 @@ export class Function implements Compile {
 //  <Statement>...
 // }
 export class Block implements Compile {
-  block: (FuncParam | Statement | Expression)[];
-  constructor(block: (FuncParam | Statement | Expression)[]) {
+  block: Statement[];
+  constructor(block: Statement[]) {
     this.block = block;
   }
 
-  pushToStart(stmt: FuncParam | Statement | Expression) {
+  pushToStart(stmt: Statement) {
     this.block.unshift(stmt);
   }
 
@@ -49,12 +54,12 @@ export class Block implements Compile {
 }
 
 // let <name> = <Statement>
-export class LetBinding implements Compile {
+export class Let implements Compile {
   name: Ident;
-  statement: Statement;
-  constructor(name: Ident, statement: Statement) {
+  expression: Expression;
+  constructor(name: Ident, expression: Expression) {
     this.name = name;
-    this.statement = statement;
+    this.expression = expression;
   }
 
   accept(visitor: AstVisitor): string {
@@ -138,6 +143,28 @@ export class Unary implements Compile {
   }
 }
 
+// <Ident> ( <Expression> ) +
+export class Call implements Compile {
+  value: Ident;
+  args: Expression[];
+  constructor(value: Ident, args: Expression[]) {
+    this.value = value;
+    this.args = args;
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
+  toString() {
+    return `Call( ${this.value}, [${this.args.join(", ")}])`;
+  }
+}
+
 // Number [1-9]
 export class Number implements Compile {
   value: string;
@@ -170,6 +197,14 @@ export class Ident implements Compile {
 
   accept(visitor: AstVisitor): string {
     return visitor.visit(this);
+  }
+
+  [Symbol.for("Deno.customInspect")]() {
+    return this.toString();
+  }
+
+  toString() {
+    return `Ident( ${this.ident} )`;
   }
 }
 

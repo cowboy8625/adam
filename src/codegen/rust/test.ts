@@ -13,7 +13,7 @@ import {
   Function,
   Ident,
   IfElse,
-  LetBinding,
+  Let,
   Number,
 } from "./../../ast/mod.ts";
 
@@ -24,7 +24,7 @@ Deno.test("code-gen-Funciton", () => {
   const xIdent = new Ident("x");
   const yIdent = new Ident("y");
 
-  const expr = new Binary(xIdent, yIdent, op);
+  const expr = new ExprStmt(new Binary(xIdent, yIdent, op));
   const block = new Block([expr]);
 
   const params = [xIdent, yIdent];
@@ -49,19 +49,17 @@ Deno.test("code-gen-Block", () => {
   const right1 = new Ident("right1");
 
   const expr1 = new Binary(left1, right1, op);
-  const stmt1 = new ExprStmt(expr1);
 
   const left2 = new Ident("left2");
   const right2 = new Ident("right2");
 
   const expr2 = new Binary(left2, right2, op);
-  const stmt2 = new ExprStmt(expr2);
 
   const firstBinding = new Ident("foo");
-  const letBinding1 = new LetBinding(firstBinding, stmt1);
+  const letBinding1 = new ExprStmt(new Let(firstBinding, expr1));
 
   const secondBinding = new Ident("bar");
-  const letBinding2 = new LetBinding(secondBinding, stmt2);
+  const letBinding2 = new Let(secondBinding, expr2);
 
   const block = new Block([letBinding1, letBinding2]);
 
@@ -75,14 +73,13 @@ let mut bar = left2 + right2;
   assertEquals(right, left);
 });
 
-Deno.test("code-gen-LetBinding", () => {
+Deno.test("code-gen-Let", () => {
   const identLeft = new Ident("a");
   const identRight = new Ident("b");
   const op = new Add();
   const bin = new Binary(identLeft, identRight, op);
-  const stmt = new ExprStmt(bin);
   const name = new Ident("foo");
-  const letBinding = new LetBinding(name, stmt);
+  const letBinding = new Let(name, bin);
   const compiler = new Compiler();
   const left = compiler.compile(letBinding);
   const right = `let mut foo = a + b;`;
@@ -91,8 +88,8 @@ Deno.test("code-gen-LetBinding", () => {
 
 Deno.test("code-gen-IfElse", () => {
   const condition = new Boolean("true");
-  const thenBlock = new Block([new Number("1")]);
-  const elseBlock = new Block([new Number("2")]);
+  const thenBlock = new Block([new ExprStmt(new Number("1"))]);
+  const elseBlock = new Block([new ExprStmt(new Number("2"))]);
   const ifElse = new IfElse(condition, thenBlock, elseBlock);
   const compiler = new Compiler();
   const left = compiler.compile(ifElse);
