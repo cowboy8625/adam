@@ -7,7 +7,7 @@ function isDigit(str: string): boolean {
 }
 
 function number(src: string): ParserResult<number> {
-  if (!src.length && !isDigit(src[0])) {
+  if (!src.length || !isDigit(src[0])) {
     return Result.err(src);
   }
 
@@ -23,7 +23,7 @@ function number(src: string): ParserResult<number> {
 }
 
 function string(src: string): ParserResult<string> {
-  if (!src.length && src[0] !== '"') {
+  if (!src.length || src[0] !== '"') {
     return Result.err(src);
   }
 

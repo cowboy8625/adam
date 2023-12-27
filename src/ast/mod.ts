@@ -155,13 +155,17 @@ export class Call implements Compile {
   accept(visitor: AstVisitor): string {
     return visitor.visit(this);
   }
+}
 
-  [Symbol.for("Deno.customInspect")]() {
-    return this.toString();
+// String "..."
+export class StringLiteral implements Compile {
+  value: string;
+  constructor(value: string) {
+    this.value = value;
   }
 
-  toString() {
-    return `Call( ${this.value}, [${this.args.join(", ")}])`;
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
   }
 }
 
@@ -197,14 +201,6 @@ export class Ident implements Compile {
 
   accept(visitor: AstVisitor): string {
     return visitor.visit(this);
-  }
-
-  [Symbol.for("Deno.customInspect")]() {
-    return this.toString();
-  }
-
-  toString() {
-    return `Ident( ${this.ident} )`;
   }
 }
 

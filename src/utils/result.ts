@@ -19,9 +19,9 @@ export default class Result<T, E> {
     return Result.err(this.value as E);
   }
 
-  public mapErr<U>(fn: (error: E) => Result<T, U>): Result<T, U> {
+  public mapErr<U>(fn: (error: E) => U): Result<T, U> {
     if (this.kind === "Err") {
-      return fn(this.value as E);
+      return Result.err(fn(this.value as E));
     }
     return Result.ok(this.value as T);
   }
@@ -71,6 +71,14 @@ export default class Result<T, E> {
       return Result.ok(this.value as T);
     }
     return other;
+  }
+
+  public inspect(fn: (value: T) => void): Result<T, E> {
+    if (this.kind === "Ok") {
+      fn(this.value as T);
+    }
+
+    return this;
   }
 }
 

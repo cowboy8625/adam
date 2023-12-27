@@ -37,6 +37,17 @@ Deno.test("combinators-surround", () => {
   assertEquals(right, { src, value });
 });
 
+Deno.test("combinators-oneOf", () => {
+  const parser = Parse.oneOf(
+    Parse.map(Parse.number, (x) => String(x)),
+    Parse.string,
+  );
+  // Number
+  assertEquals(parser("123").unwrap(), { src: "", value: "123" });
+  // String
+  assertEquals(parser('"123"').unwrap(), { src: "", value: '"123"' });
+});
+
 Deno.test("combinators-right", () => {
   const { src, value } = Parse.right(
     Parse.tag("("),

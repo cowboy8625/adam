@@ -12,7 +12,6 @@ import {
   statementParser,
 } from "./mod.ts";
 import {
-  Statement,
   Function,
   Ident,
   Binary,
@@ -21,6 +20,8 @@ import {
   Call,
   Expression,
   ExprStmt,
+  StringLiteral,
+  Number,
 } from "../ast/mod.ts";
 import Result from "../utils/result.ts";
 
@@ -51,6 +52,24 @@ Deno.test("parse call", () => {
         new Block([
           new ExprStmt(
             new Call(new Ident("add"), [new Ident("x"), new Ident("y")]),
+          ),
+        ]),
+      ),
+    ]),
+  );
+});
+
+Deno.test("hello world", () => {
+  const result = parse('fn main() { print("Hello World!"); }');
+  assertEquals(
+    result,
+    Result.ok([
+      new Function(
+        new Ident("main"),
+        [],
+        new Block([
+          new ExprStmt(
+            new Call(new Ident("print"), [new StringLiteral('"Hello World!"')]),
           ),
         ]),
       ),
@@ -169,7 +188,20 @@ Deno.test("argumentParser", () => {
   );
 });
 
-Deno.test("primaryParser", () => {
+Deno.test("primaryParser ident", () => {
   const result = primaryParser("     add");
   assertEquals(result, Result.ok({ src: "", value: new Ident("add") }));
+});
+
+Deno.test("primaryParser number", () => {
+  const result = primaryParser("     123");
+  assertEquals(result, Result.ok({ src: "", value: new Number("123") }));
+});
+
+Deno.test("primaryParser string", () => {
+  const result = primaryParser('"123"');
+  assertEquals(
+    result,
+    Result.ok({ src: "", value: new StringLiteral('"123"') }),
+  );
 });

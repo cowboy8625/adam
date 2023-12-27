@@ -19,6 +19,8 @@ import {
   Number,
   Op,
   Statement,
+  Call,
+  StringLiteral,
 } from "./../../ast/mod.ts";
 
 export interface Compile {
@@ -35,6 +37,8 @@ export interface AstVisitor {
   visitIfElse(node: IfElse): string;
   visitBinary(node: Binary): string;
   visitUnary(node: Unary): string;
+  visitCall(node: Call): string;
+  visitStringLiteral(node: StringLiteral): string;
   visitNumber(node: Number): string;
   visitIdent(node: Ident): string;
   visitOp(node: Op): string;
@@ -59,13 +63,16 @@ export class FuncParam implements Compile {
 export class Compiler implements AstVisitor {
   visitFunction(node: Function): string {
     const name = this.visit(node.name);
+    const block = this.visit(node.block);
+    if (name === "main") {
+      return `fn ${name}() ${block}`;
+    }
     // FIXME: Not sure how to fix this just yet
     // node.params.reverse().forEach((ident, index) => {
     //   node.block.pushToStart(
     //     new FuncParam(ident, node.params.length - index - 1),
     //   );
     // });
-    const block = this.visit(node.block);
     return `fn ${name}(args: Vec<Object>) -> Object ${block}`;
   }
 
@@ -119,6 +126,21 @@ ${stmts}
     return `${op}${right}`;
   }
 
+  visitCall(node: Call): string {
+    const name = this.visit(node.value);
+    if (name === "print") {
+      return `println!("{}", ${node.args
+        .map((arg) => this.visit(arg))
+        .join(", ")})`;
+    }
+    const args = node.args.map((arg) => this.visit(arg)).join(", ");
+    return `${name}(${args})`;
+  }
+
+  visitStringLiteral(node: StringLiteral): string {
+    return `Object::String(${node.value})`;
+  }
+
   visitNumber(node: Number): string {
     return `Object::Number(${node.value})`;
   }
@@ -154,6 +176,10 @@ ${stmts}
       return this.visitBinary(node);
     } else if (node instanceof Unary) {
       return this.visitUnary(node);
+    } else if (node instanceof Call) {
+      return this.visitCall(node);
+    } else if (node instanceof StringLiteral) {
+      return this.visitStringLiteral(node);
     } else if (node instanceof Number) {
       return this.visitNumber(node);
     } else if (node instanceof Boolean) {

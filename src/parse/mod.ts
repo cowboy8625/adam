@@ -11,8 +11,10 @@ import {
   Expression,
   Function,
   Ident,
+  Number,
   Op,
   Statement,
+  StringLiteral,
   Sub,
 } from "../ast/mod.ts";
 import Parse from "../combinators/mod.ts";
@@ -109,6 +111,7 @@ export function binaryParser(src: string): ParserResult<Expression> {
     Parse.optional(Parse.whitespace),
     Parse.oneOf(Parse.tag("+"), Parse.tag("-")),
   );
+
   const mapStringToOp = (op: string) => {
     switch (op) {
       case "+":
@@ -119,15 +122,17 @@ export function binaryParser(src: string): ParserResult<Expression> {
         std.unreachable();
     }
   };
+
   return Parse.map(
     Parse.pair3<Expression, Op, Expression>(
       primaryParser,
       Parse.map(opParser, mapStringToOp),
       primaryParser,
     ),
+
     ([lhs, op, rhs]) =>
       new Binary(lhs as Expression, rhs as Expression, op as Op) as Expression,
-  )(src).mapErr(callParser);
+  )(src).or(callParser(src));
 }
 
 export function callParser(src: string): ParserResult<Expression> {
@@ -160,6 +165,18 @@ export function argumentParser({
 export function primaryParser(src: string): ParserResult<Expression> {
   return Parse.right(
     Parse.optional(Parse.whitespace),
-    Parse.map(Parse.identifier, (value) => new Ident(value)),
+    Parse.oneOf(identifierParser, stringParser, numberParser),
   )(src);
+}
+
+export function identifierParser(src: string): ParserResult<Expression> {
+  return Parse.map(Parse.identifier, (value) => new Ident(value))(src);
+}
+
+export function stringParser(src: string): ParserResult<Expression> {
+  return Parse.map(Parse.string, (value) => new StringLiteral(value))(src);
+}
+
+export function numberParser(src: string): ParserResult<Expression> {
+  return Parse.map(Parse.number, (value) => new Number(String(value)))(src);
 }

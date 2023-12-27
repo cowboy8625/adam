@@ -15,9 +15,26 @@ import {
   IfElse,
   Let,
   Number,
+  Call,
+  StringLiteral,
 } from "./../../ast/mod.ts";
 
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
+
+Deno.test("code-gen-hello-world", () => {
+  const func = new Function(
+    new Ident("main"),
+    [],
+    new Block([
+      new ExprStmt(
+        new Call(new Ident("print"), [new StringLiteral('"Hello World!"')]),
+      ),
+    ]),
+  );
+  const compiler = new Compiler();
+  const left = compiler.compile(func);
+  console.log(left);
+});
 
 Deno.test("code-gen-Funciton", () => {
   const op = new Add();
@@ -94,9 +111,9 @@ Deno.test("code-gen-IfElse", () => {
   const compiler = new Compiler();
   const left = compiler.compile(ifElse);
   const right = `if Object::Boolean(true).unwrap_boolean_or_default() {
-Object::Number(1)
+Object::Number(1);
 } else {
-Object::Number(2)
+Object::Number(2);
 }`;
   assertEquals(right, left);
 });
