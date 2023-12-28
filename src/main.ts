@@ -20,11 +20,23 @@ function writeToFile(filePath: string, content: string): Result<null, string> {
   }
 }
 
+function displayAstDebug(flag: boolean) {
+  return (ast: Function[]) => {
+    if (!flag) {
+      return;
+    }
+    console.log(ast);
+  };
+}
+
 async function main() {
   if (Deno.args.length < 1) {
     console.error("Please provide a file path as an argument");
     Deno.exit(1);
   }
+  const showAstDebug = Deno.args.some(
+    (arg) => arg === "--ast-debug" || arg === "-ad",
+  );
   const filePath = Deno.args[1];
   const objectFile = await openFile("object.rs").then((r) =>
     r.expect("failed to open object.rs"),
@@ -37,6 +49,7 @@ async function main() {
       .andThen((content: string) => {
         return parse(content);
       })
+      .inspect(displayAstDebug(showAstDebug))
       .map((content: Function[]) => {
         const compiler = new Compiler();
         return content

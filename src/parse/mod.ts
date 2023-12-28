@@ -97,9 +97,20 @@ export function blockParser({
 
 export function statementParser(src: string): ParserResult<Statement> {
   return Parse.map(
-    Parse.left(expressionParser, Parse.tag(";")),
+    Parse.left(Parse.oneOf(letBindingParser, expressionParser), Parse.tag(";")),
     (value) => new ExprStmt(value),
   )(src);
+}
+
+export function letBindingParser(src: string): ParserResult<Expression> {
+  const result = Parse.right(
+    Parse.optional(Parse.whitespace),
+    Parse.tag("let"),
+  )(src);
+  if (result.isOk()) {
+    std.unimplemented(`letBindingParser ${src}`);
+  }
+  return Result.err(result.unwrapErr());
 }
 
 export function expressionParser(src: string): ParserResult<Expression> {
@@ -127,7 +138,7 @@ export function binaryParser(src: string): ParserResult<Expression> {
     Parse.pair3<Expression, Op, Expression>(
       primaryParser,
       Parse.map(opParser, mapStringToOp),
-      primaryParser,
+      binaryParser,
     ),
 
     ([lhs, op, rhs]) =>

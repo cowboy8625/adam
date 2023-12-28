@@ -153,13 +153,26 @@ Deno.test("expressionParser", () => {
 });
 
 Deno.test("binaryParser", () => {
-  const result = binaryParser(" x + y");
   assertEquals(
-    result,
+    binaryParser(" x + y"),
     Result.ok({
       src: "",
       value: new Binary(new Ident("x"), new Ident("y"), new Add()),
     }),
+    "x + y",
+  );
+
+  assertEquals(
+    binaryParser(" 1 + 2 + 3"),
+    Result.ok({
+      src: "",
+      value: new Binary(
+        new Number("1"),
+        new Binary(new Number("2"), new Number("3"), new Add()),
+        new Add(),
+      ),
+    }),
+    "1 + 2 + 3",
   );
 });
 

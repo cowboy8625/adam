@@ -19,7 +19,7 @@ impl Record {
         self.inner
             .iter()
             .find(|(obj_key, _)| key == obj_key)
-            .map(|(k, v)| v)
+            .map(|(_, v)| v)
     }
 }
 

@@ -142,7 +142,8 @@ ${stmts}
   }
 
   visitNumber(node: Number): string {
-    return `Object::Number(${node.value})`;
+    const value = node.value.includes(".") ? node.value : `${node.value}.0`;
+    return `Object::Number(${value})`;
   }
 
   visitBoolean(node: Boolean): string {
