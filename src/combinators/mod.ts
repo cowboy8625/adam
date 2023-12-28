@@ -2,11 +2,11 @@ import Result from "./../utils/result.ts";
 import Option from "./../utils/option.ts";
 import type { Parser, ParserResult } from "./mod.types.ts";
 
-function isDigit(str: string): boolean {
+export function isDigit(str: string): boolean {
   return /^\d+$/.test(str);
 }
 
-function number(src: string): ParserResult<number> {
+export function number(src: string): ParserResult<number> {
   if (!src.length || !isDigit(src[0])) {
     return Result.err(src);
   }
@@ -22,7 +22,7 @@ function number(src: string): ParserResult<number> {
   });
 }
 
-function string(src: string): ParserResult<string> {
+export function string(src: string): ParserResult<string> {
   if (!src.length || src[0] !== '"') {
     return Result.err(src);
   }
@@ -39,7 +39,7 @@ function string(src: string): ParserResult<string> {
   });
 }
 
-function identifier(src: string): ParserResult<string> {
+export function identifier(src: string): ParserResult<string> {
   if (!src.length) {
     return Result.err(src);
   }
@@ -59,7 +59,7 @@ function identifier(src: string): ParserResult<string> {
   });
 }
 
-function tag<T>(name: string): Parser<T> {
+export function tag<T>(name: string): Parser<T> {
   return (src: string): ParserResult<T> => {
     if (src.startsWith(name)) {
       const result = {
@@ -72,7 +72,7 @@ function tag<T>(name: string): Parser<T> {
   };
 }
 
-function many0<T>(parser: Parser<T>): Parser<T[]> {
+export function many0<T>(parser: Parser<T>): Parser<T[]> {
   return (src: string): ParserResult<T[]> => {
     const items = [];
     while (true) {
@@ -92,7 +92,7 @@ function many0<T>(parser: Parser<T>): Parser<T[]> {
   };
 }
 
-function whitespace(src: string): ParserResult<string> {
+export function whitespace(src: string): ParserResult<string> {
   if (!src.length && !/\s/.test(src[0])) {
     return Result.err(src);
   }
@@ -108,7 +108,10 @@ function whitespace(src: string): ParserResult<string> {
   });
 }
 
-function right<L, R>(parserLeft: Parser<L>, parserRight: Parser<R>): Parser<R> {
+export function right<L, R>(
+  parserLeft: Parser<L>,
+  parserRight: Parser<R>,
+): Parser<R> {
   return (src: string): ParserResult<R> => {
     const result = parserLeft(src);
     if (result.isErr()) {
@@ -119,7 +122,10 @@ function right<L, R>(parserLeft: Parser<L>, parserRight: Parser<R>): Parser<R> {
   };
 }
 
-function left<L, R>(parserLeft: Parser<L>, parserRight: Parser<R>): Parser<L> {
+export function left<L, R>(
+  parserLeft: Parser<L>,
+  parserRight: Parser<R>,
+): Parser<L> {
   return (src: string): ParserResult<L> => {
     const result0 = parserLeft(src);
     if (result0.isErr()) {
@@ -139,7 +145,7 @@ function left<L, R>(parserLeft: Parser<L>, parserRight: Parser<R>): Parser<L> {
   };
 }
 
-function surround<L, M, R>(
+export function surround<L, M, R>(
   parserLeft: Parser<L>,
   parserMiddle: Parser<M>,
   parserRight: Parser<R>,
@@ -147,7 +153,7 @@ function surround<L, M, R>(
   return right(parserLeft, left(parserMiddle, parserRight));
 }
 
-function optional<T>(parser: Parser<T>): Parser<Option<T>> {
+export function optional<T>(parser: Parser<T>): Parser<Option<T>> {
   return (src: string): ParserResult<Option<T>> => {
     const result = parser(src);
     if (result.isErr()) {
@@ -164,7 +170,7 @@ function optional<T>(parser: Parser<T>): Parser<Option<T>> {
   };
 }
 
-function pair3<T1, T2, T3>(
+export function pair3<T1, T2, T3>(
   ...parsers: [Parser<T1>, Parser<T2>, Parser<T3>]
 ): Parser<(T1 | T2 | T3)[]> {
   return (src: string): ParserResult<(T1 | T2 | T3)[]> => {
@@ -185,7 +191,7 @@ function pair3<T1, T2, T3>(
   };
 }
 
-function oneOf<T>(...parsers: Parser<T>[]): Parser<T> {
+export function oneOf<T>(...parsers: Parser<T>[]): Parser<T> {
   return (src: string): ParserResult<T> => {
     for (const parser of parsers) {
       const result = parser(src);
@@ -197,7 +203,7 @@ function oneOf<T>(...parsers: Parser<T>[]): Parser<T> {
   };
 }
 
-function map<U, T>(parser: Parser<T>, fn: (value: T) => U): Parser<U> {
+export function map<U, T>(parser: Parser<T>, fn: (value: T) => U): Parser<U> {
   return (src: string): ParserResult<U> => {
     const result = parser(src);
     if (result.isErr()) {

@@ -5,5 +5,11 @@ export type ParserResultSuccess<T> = {
   value: T;
 };
 
+export type ParserResultError<E> = {
+  src: string;
+  value: E;
+};
+
 export type ParserResult<T> = Result<ParserResultSuccess<T>, string>;
+
 export type Parser<T> = (src: string) => ParserResult<T>;

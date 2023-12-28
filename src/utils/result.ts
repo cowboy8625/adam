@@ -80,6 +80,13 @@ export default class Result<T, E> {
 
     return this;
   }
+
+  public expect(message: string): T {
+    if (this.kind === "Ok") {
+      return this.value as T;
+    }
+    throw new Error(message);
+  }
 }
 
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";

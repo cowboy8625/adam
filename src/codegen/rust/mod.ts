@@ -138,7 +138,7 @@ ${stmts}
   }
 
   visitStringLiteral(node: StringLiteral): string {
-    return `Object::String(${node.value})`;
+    return `Object::String(${node.value}.to_string())`;
   }
 
   visitNumber(node: Number): string {
