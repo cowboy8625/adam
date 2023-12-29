@@ -1,234 +1,188 @@
 import Result from "./../utils/result.ts";
 import Option from "./../utils/option.ts";
-import type { Parser, ParserResult } from "./mod.types.ts";
+import type { ParserResult, BasicParser, Success } from "./mod.types.ts";
 
-export function isDigit(str: string): boolean {
-  return /^\d+$/.test(str);
-}
-
-export function number(src: string): ParserResult<number> {
-  if (!src.length || !isDigit(src[0])) {
-    return Result.err(src);
-  }
-
-  let index = 0;
-  while (isDigit(src.charAt(index))) {
-    index += 1;
-  }
-
-  return Result.ok({
-    src: src.slice(index),
-    value: parseInt(src.slice(0, index), 10),
-  });
-}
-
-export function string(src: string): ParserResult<string> {
-  if (!src.length || src[0] !== '"') {
-    return Result.err(src);
-  }
-
-  let index = 1;
-  while (src.charAt(index) !== '"') {
-    index += 1;
-  }
-  index += 1;
-
-  return Result.ok({
-    src: src.slice(index),
-    value: src.slice(0, index),
-  });
-}
-
-export function identifier(src: string): ParserResult<string> {
-  if (!src.length) {
-    return Result.err(src);
-  }
-  if (!/^[a-zA-Z_]+$/.test(src[0])) {
-    return Result.err(src);
-  }
-
-  let index = 1;
-
-  while (/^[a-zA-Z0-9_]+$/.test(src.charAt(index))) {
-    index += 1;
-  }
-
-  return Result.ok({
-    src: src.slice(index),
-    value: src.slice(0, index),
-  });
-}
-
-export function tag<T>(name: string): Parser<T> {
-  return (src: string): ParserResult<T> => {
-    if (src.startsWith(name)) {
-      const result = {
-        src: src.slice(name.length),
-        value: name,
-      };
-      return Result.ok(result) as ParserResult<T>;
+function regexParser(regex: RegExp): BasicParser<string> {
+  return (src: string): ParserResult<string> => {
+    const match = src.match(regex);
+    if (!match) {
+      return Result.err(src);
     }
-    return Result.err(src);
+    const value = match[0];
+    const index = match.index ?? 0;
+    return Result.ok({ src: src.slice(index + value.length), value });
   };
 }
 
-export function many0<T>(parser: Parser<T>): Parser<T[]> {
-  return (src: string): ParserResult<T[]> => {
-    const items = [];
-    while (true) {
-      const result = parser(src);
-      if (result.isErr()) {
-        break;
+export default class Parser<T> {
+  private readonly parseFunction: BasicParser<T>;
+
+  public constructor(parseFunction: BasicParser<T>) {
+    this.parseFunction = parseFunction;
+  }
+
+  public static identifier(): Parser<string> {
+    return new Parser<string>(regexParser(/^[a-zA-Z]+/));
+  }
+
+  public static number(): Parser<string> {
+    return new Parser<string>(regexParser(/^\d+/));
+  }
+
+  public static whitespace(): Parser<string> {
+    return new Parser<string>(regexParser(/^\s+/));
+  }
+
+  public static string(): Parser<string> {
+    return new Parser<string>(regexParser(/"([^"]*)"/));
+  }
+
+  public static tag<T>(name: string): Parser<T> {
+    return new Parser<T>((src: string): ParserResult<T> => {
+      if (src.startsWith(name)) {
+        const result = {
+          src: src.slice(name.length),
+          value: name,
+        };
+        return Result.ok(result) as ParserResult<T>;
       }
-      const { src: newSrc, value } = result.unwrap();
-      src = newSrc;
-      items.push(value);
-    }
-
-    return Result.ok({
-      src,
-      value: items,
+      return Result.err(src);
     });
-  };
-}
-
-export function whitespace(src: string): ParserResult<string> {
-  if (!src.length && !/\s/.test(src[0])) {
-    return Result.err(src);
   }
 
-  let index = 0;
-  while (/\s/.test(src.charAt(index))) {
-    index += 1;
+  public static oneOf<T>(...parsers: Parser<T>[]): Parser<T> {
+    return new Parser<T>((src: string): ParserResult<T> => {
+      for (const parser of parsers) {
+        const result = parser.parse(src);
+        if (result.isOk()) {
+          return result;
+        }
+      }
+      return Result.err(src);
+    });
   }
 
-  return Result.ok({
-    src: src.slice(index),
-    value: src.slice(0, index),
-  });
-}
-
-export function right<L, R>(
-  parserLeft: Parser<L>,
-  parserRight: Parser<R>,
-): Parser<R> {
-  return (src: string): ParserResult<R> => {
-    const result = parserLeft(src);
-    if (result.isErr()) {
-      return Result.err(src);
-    }
-    const { src: newSrc } = result.unwrap();
-    return parserRight(newSrc);
-  };
-}
-
-export function left<L, R>(
-  parserLeft: Parser<L>,
-  parserRight: Parser<R>,
-): Parser<L> {
-  return (src: string): ParserResult<L> => {
-    const result0 = parserLeft(src);
-    if (result0.isErr()) {
-      return Result.err(src);
-    }
-    const { src: newSrc, value } = result0.unwrap();
-
-    const result1 = parserRight(newSrc);
-    if (result1.isErr()) {
-      return Result.err(src);
-    }
-    const { src: src1 } = result1.unwrap();
-    return Result.ok({
-      src: src1,
-      value,
+  public static right<L, R>(
+    leftParser: Parser<L>,
+    rightParser: Parser<R>,
+  ): Parser<R> {
+    return new Parser<R>((src: string): ParserResult<R> => {
+      const result = leftParser.parse(src);
+      if (result.isErr()) {
+        return Result.err(src);
+      }
+      const { src: newSrc } = result.unwrap();
+      return rightParser.parse(newSrc);
     });
-  };
-}
+  }
 
-export function surround<L, M, R>(
-  parserLeft: Parser<L>,
-  parserMiddle: Parser<M>,
-  parserRight: Parser<R>,
-): Parser<M> {
-  return right(parserLeft, left(parserMiddle, parserRight));
-}
+  public static left<L, R>(
+    leftParser: Parser<L>,
+    rightParser: Parser<R>,
+  ): Parser<L> {
+    return new Parser<L>((src: string): ParserResult<L> => {
+      const result0 = leftParser.parse(src);
+      if (result0.isErr()) {
+        return Result.err(src);
+      }
+      const { src: newSrc, value } = result0.unwrap();
 
-export function optional<T>(parser: Parser<T>): Parser<Option<T>> {
-  return (src: string): ParserResult<Option<T>> => {
-    const result = parser(src);
-    if (result.isErr()) {
+      const result1 = rightParser.parse(newSrc);
+      if (result1.isErr()) {
+        return Result.err(src);
+      }
+      const { src: src1 } = result1.unwrap();
       return Result.ok({
-        src,
-        value: Option.none(),
+        src: src1,
+        value,
       });
-    }
-    const { src: newSrc, value } = result.unwrap();
-    return Result.ok({
-      src: newSrc,
-      value: Option.some(value),
     });
-  };
-}
+  }
+  public static surround<L, M, R>(
+    parserLeft: Parser<L>,
+    parserMiddle: Parser<M>,
+    parserRight: Parser<R>,
+  ): Parser<M> {
+    return Parser.right(parserLeft, Parser.left(parserMiddle, parserRight));
+  }
 
-export function pair3<T1, T2, T3>(
-  ...parsers: [Parser<T1>, Parser<T2>, Parser<T3>]
-): Parser<(T1 | T2 | T3)[]> {
-  return (src: string): ParserResult<(T1 | T2 | T3)[]> => {
-    const results = [];
-    for (const parser of parsers) {
-      const result = parser(src);
+  public parse(src: string): ParserResult<T> {
+    return this.parseFunction(src);
+  }
+
+  public then<U>(nextParser: Parser<U>): Parser<U> {
+    return new Parser<U>((src: string) =>
+      this.parse(src).andThen(({ src }: Success<T>) => nextParser.parse(src)),
+    );
+  }
+
+  public map<U>(fn: (value: T) => U): Parser<U> {
+    return new Parser<U>((src: string): ParserResult<U> => {
+      const result = this.parse(src);
       if (result.isErr()) {
         return Result.err(src);
       }
       const { src: newSrc, value } = result.unwrap();
-      src = newSrc;
-      results.push(value);
-    }
-    return Result.ok({
-      src,
-      value: results,
+      return Result.ok({
+        src: newSrc,
+        value: fn(value),
+      });
     });
-  };
-}
+  }
 
-export function oneOf<T>(...parsers: Parser<T>[]): Parser<T> {
-  return (src: string): ParserResult<T> => {
-    for (const parser of parsers) {
-      const result = parser(src);
-      if (result.isOk()) {
-        return result;
+  public andThen<U>(nextParser: Parser<U>): Parser<readonly [T, U]> {
+    return new Parser<readonly [T, U]>(
+      (src: string): ParserResult<readonly [T, U]> => {
+        return this.parse(src).andThen(
+          ({ src, value: value1 }: Success<T>): ParserResult<readonly [T, U]> =>
+            nextParser.parse(src).map(
+              ({
+                src,
+                value: value2,
+              }: Success<U>): Success<readonly [T, U]> => ({
+                src,
+                value: [value1, value2],
+              }),
+            ),
+        );
+      },
+    );
+  }
+
+  public optional(): Parser<Option<T>> {
+    return new Parser<Option<T>>((src: string): ParserResult<Option<T>> => {
+      const result = this.parseFunction(src);
+      if (result.isErr()) {
+        return Result.ok({
+          src,
+          value: Option.none(),
+        });
       }
-    }
-    return Result.err(src);
-  };
-}
-
-export function map<U, T>(parser: Parser<T>, fn: (value: T) => U): Parser<U> {
-  return (src: string): ParserResult<U> => {
-    const result = parser(src);
-    if (result.isErr()) {
-      return Result.err(src);
-    }
-    const { src: newSrc, value } = result.unwrap();
-    return Result.ok({
-      src: newSrc,
-      value: fn(value),
+      const { src: newSrc, value } = result.unwrap();
+      return Result.ok({
+        src: newSrc,
+        value: Option.some(value),
+      });
     });
-  };
-}
+  }
 
-export default {
-  map,
-  left,
-  right,
-  surround,
-  tag,
-  string,
-  number,
-  many0,
-  whitespace,
-  identifier,
-  optional,
-  pair3,
-  oneOf,
-};
+  public many0(): Parser<T[]> {
+    return new Parser<T[]>((src: string): ParserResult<T[]> => {
+      const items = [];
+      while (true) {
+        const result = this.parse(src);
+        if (result.isErr()) {
+          break;
+        }
+        const { src: newSrc, value } = result.unwrap();
+        src = newSrc;
+        items.push(value);
+      }
+
+      return Result.ok({
+        src,
+        value: items,
+      });
+    });
+  }
+}

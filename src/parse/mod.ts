@@ -1,6 +1,5 @@
 import * as std from "https://deno.land/std@0.200.0/assert/mod.ts";
 import Result from "../utils/result.ts";
-import Option from "../utils/option.ts";
 import {
   Add,
   Binary,
@@ -18,11 +17,7 @@ import {
   Sub,
 } from "../ast/mod.ts";
 import Parse from "../combinators/mod.ts";
-import type {
-  Parser,
-  ParserResult,
-  ParserResultSuccess,
-} from "../combinators/mod.types.ts";
+import type { ParserResult } from "../combinators/mod.types.ts";
 
 export type ParserError = "Nothing";
 
@@ -32,98 +27,65 @@ export function parse(src: string): Result<Declaration[], ParserError[]> {
     .orElse<ParserError[]>((_) => Result.err(["Nothing"]));
 }
 
-export function identParser(
-  i: ParserResultSuccess<string>,
-): ParserResult<Ident> {
-  return Parse.map(
-    Parse.right(Parse.optional(Parse.whitespace), Parse.identifier),
-    (value) => new Ident(value),
-  )(i.src);
-}
-
 export function programParser(src: string): ParserResult<Declaration[]> {
-  return Parse.many0(functionParser)(src);
+  return functionParser().many0().parse(src);
 }
 
-export function functionParser(src: string): ParserResult<Function> {
-  const result = Parse.tag<string>("fn")(src)
-    .andThen(identParser)
-    .andThen(paramParser)
-    .andThen(blockParser)
-    .map(({ src, value: [name, params, body] }) => {
-      return { src, value: new Function(name, params, body) };
+export function functionParser(): Parse<Function> {
+  return Parse.tag("fn")
+    .then<Ident>(identifierParser<Ident>())
+    .andThen<Ident[]>(paramParser())
+    .andThen<Block>(blockParser())
+    .map(([[name, params], body]) => {
+      return new Function(name, params, body);
     });
-  if (result.isErr()) {
-    return Result.err(result.unwrapErr());
-  }
-  return result;
 }
 
-export function paramParser({
-  src,
-  value: name,
-}: ParserResultSuccess<Ident>): ParserResult<[Ident, Ident[]]> {
+export function paramParser(): Parse<Ident[]> {
   return Parse.surround(
     Parse.tag("("),
-    Parse.many0(
-      Parse.surround<Option<string>, string, Option<string>>(
-        Parse.optional<string>(Parse.whitespace),
-        Parse.identifier,
-        Parse.optional<string>(Parse.tag(",")),
-      ),
-    ),
+    Parse.left(identifierParser<Ident>(), Parse.tag(",").optional()).many0(),
     Parse.tag(")"),
-  )(src).map(({ src, value }) => ({
-    src,
-    value: [name, value.map((name) => new Ident(name))],
-  }));
-}
-
-export function blockParser({
-  src,
-  value: [name, params],
-}: ParserResultSuccess<[Ident, Ident[]]>): ParserResult<
-  [Ident, Ident[], Block]
-> {
-  return Parse.surround(
-    Parse.right(Parse.optional(Parse.whitespace), Parse.tag("{")),
-    Parse.many0(statementParser),
-    Parse.right(Parse.optional(Parse.whitespace), Parse.tag("}")),
-  )(src).map(({ src, value }) => ({
-    src,
-    value: [name, params, new Block(value)],
-  }));
-}
-
-export function statementParser(src: string): ParserResult<Statement> {
-  return Parse.map(
-    Parse.left(Parse.oneOf(letBindingParser, expressionParser), Parse.tag(";")),
-    (value) => new ExprStmt(value),
-  )(src);
-}
-
-export function letBindingParser(src: string): ParserResult<Expression> {
-  const result = Parse.right(
-    Parse.optional(Parse.whitespace),
-    Parse.tag("let"),
-  )(src);
-  if (result.isOk()) {
-    std.unimplemented(`letBindingParser ${src}`);
-  }
-  return Result.err(result.unwrapErr());
-}
-
-export function expressionParser(src: string): ParserResult<Expression> {
-  return binaryParser(src);
-}
-
-export function binaryParser(src: string): ParserResult<Expression> {
-  const opParser: Parser<string> = Parse.right(
-    Parse.optional(Parse.whitespace),
-    Parse.oneOf(Parse.tag("+"), Parse.tag("-")),
   );
+}
 
-  const mapStringToOp = (op: string) => {
+export function blockParser(): Parse<Block> {
+  return Parse.surround(
+    Parse.right(Parse.whitespace().optional(), Parse.tag("{")),
+    statementParser().many0(),
+    Parse.right(Parse.whitespace().optional(), Parse.tag("}")),
+  ).map((value) => new Block(value));
+}
+
+export function statementParser(): Parse<Statement> {
+  return Parse.left(
+    Parse.oneOf<Expression>(letBindingParser(), expressionParser()),
+    Parse.tag(";"),
+  ).map((value) => new ExprStmt(value));
+}
+
+export function letBindingParser(): Parse<Expression> {
+  return new Parse((src: string) => {
+    const whitespaceParser = Parse.whitespace().optional();
+    const result = Parse.right(
+      whitespaceParser,
+      Parse.right(whitespaceParser, identifierParser<Ident>()),
+    ).parse(src);
+    if (result.isOk()) {
+      std.unimplemented(
+        `letBindingParser ${src}, ${result.unwrap().value instanceof Ident}`,
+      );
+    }
+    return Result.err(result.unwrapErr());
+  });
+}
+
+export function expressionParser(): Parse<Expression> {
+  return binaryParser();
+}
+
+export function opParser(...ops: string[]): Parse<Op> {
+  return Parse.oneOf(...ops.map(Parse.tag)).map((op) => {
     switch (op) {
       case "+":
         return new Add();
@@ -132,62 +94,53 @@ export function binaryParser(src: string): ParserResult<Expression> {
       default:
         std.unreachable();
     }
-  };
-
-  return Parse.map(
-    Parse.pair3<Expression, Op, Expression>(
-      primaryParser,
-      Parse.map(opParser, mapStringToOp),
-      binaryParser,
-    ),
-
-    ([lhs, op, rhs]) =>
-      new Binary(lhs as Expression, rhs as Expression, op as Op) as Expression,
-  )(src).or(callParser(src));
+  });
 }
 
-export function callParser(src: string): ParserResult<Expression> {
-  return Parse.map(
-    Parse.right(Parse.optional(Parse.whitespace), Parse.identifier),
-    (value) => new Ident(value),
-  )(src)
-    .andThen(argumentParser)
-    .map(({ src, value: [name, args] }) => ({
-      src,
-      value: new Call(name, args) as Expression,
-    }))
-    .or(primaryParser(src));
+export function binaryParser(): Parse<Expression> {
+  return primaryParser()
+    .andThen<Op>(opParser("+", "-"))
+    .andThen<Expression>(binaryParser())
+    .map(([[lhs, op], rhs]) => new Binary(lhs, rhs, op));
 }
 
-export function argumentParser({
-  src,
-  value: name,
-}: ParserResultSuccess<Ident>): ParserResult<[Ident, Expression[]]> {
-  return Parse.map(
-    Parse.surround(
-      Parse.tag("("),
-      Parse.many0(Parse.left(expressionParser, Parse.optional(Parse.tag(",")))),
-      Parse.tag(")"),
-    ),
-    (args) => [name, args] as [Ident, Expression[]],
-  )(src);
+export function callParser(): Parse<Expression> {
+  return Parse.oneOf(
+    identifierParser<Ident>()
+      .andThen<Expression[]>(argumentParser())
+      .map(([name, args]) => new Call(name, args)),
+    primaryParser(),
+  );
 }
 
-export function primaryParser(src: string): ParserResult<Expression> {
+export function argumentParser(): Parse<Expression[]> {
+  return Parse.surround(
+    Parse.tag("("),
+    Parse.left(expressionParser(), Parse.tag(",").optional()).many0(),
+    Parse.tag(")"),
+  );
+}
+
+export function primaryParser(): Parse<Expression> {
   return Parse.right(
-    Parse.optional(Parse.whitespace),
-    Parse.oneOf(identifierParser, stringParser, numberParser),
-  )(src);
+    Parse.whitespace().optional(),
+    Parse.oneOf(identifierParser<Expression>(), stringParser(), numberParser()),
+  );
 }
 
-export function identifierParser(src: string): ParserResult<Expression> {
-  return Parse.map(Parse.identifier, (value) => new Ident(value))(src);
+export function identifierParser<T>(): Parse<T> {
+  return new Parse<T>(
+    (src: string): ParserResult<T> =>
+      Parse.identifier()
+        .map((value: string) => new Ident(value) as T)
+        .parse(src),
+  );
 }
 
-export function stringParser(src: string): ParserResult<Expression> {
-  return Parse.map(Parse.string, (value) => new StringLiteral(value))(src);
+export function stringParser(): Parse<Expression> {
+  return Parse.string().map((value) => new StringLiteral(value));
 }
 
-export function numberParser(src: string): ParserResult<Expression> {
-  return Parse.map(Parse.number, (value) => new Number(String(value)))(src);
+export function numberParser(): Parse<Expression> {
+  return Parse.number().map((value) => new Number(String(value)));
 }
