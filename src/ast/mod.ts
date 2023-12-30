@@ -14,7 +14,7 @@ export type Expression =
   | Number
   | Boolean
   | Ident;
-export type Op = Add | Sub | Mul | Div;
+export type Op = Not | Add | Sub | Mul | Div;
 
 // fn <name>(<params>) {
 //  <Block>
@@ -118,10 +118,10 @@ export class Binary implements Compile {
   left: Expression;
   right: Expression;
   op: Op;
-  constructor(left: Expression, right: Expression, op: Op) {
+  constructor(op: Op, left: Expression, right: Expression) {
+    this.op = op;
     this.left = left;
     this.right = right;
-    this.op = op;
   }
 
   accept(visitor: AstVisitor): string {
@@ -197,6 +197,17 @@ export class Ident implements Compile {
   ident: string;
   constructor(ident: string) {
     this.ident = ident;
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+export class Not implements Compile {
+  op: string;
+  constructor() {
+    this.op = "!";
   }
 
   accept(visitor: AstVisitor): string {

@@ -17,10 +17,6 @@ function regexParser(regex: RegExp): BasicParser<string> {
 export default class Parser<T> {
   private readonly parseFunction: BasicParser<T>;
 
-  public constructor(parseFunction: BasicParser<T>) {
-    this.parseFunction = parseFunction;
-  }
-
   public static identifier(): Parser<string> {
     return new Parser<string>(regexParser(/^[a-zA-Z]+/));
   }
@@ -106,6 +102,17 @@ export default class Parser<T> {
     return Parser.right(parserLeft, Parser.left(parserMiddle, parserRight));
   }
 
+  public static pair<L, R>(
+    leftParser: Parser<L>,
+    rightParser: Parser<R>,
+  ): Parser<readonly [L, R]> {
+    return leftParser.andThen(rightParser);
+  }
+
+  public constructor(parseFunction: BasicParser<T>) {
+    this.parseFunction = parseFunction;
+  }
+
   public parse(src: string): ParserResult<T> {
     return this.parseFunction(src);
   }
@@ -149,6 +156,16 @@ export default class Parser<T> {
     );
   }
 
+  public or(nextParser: Parser<T>): Parser<T> {
+    return new Parser<T>((src: string): ParserResult<T> => {
+      const result = this.parse(src);
+      if (result.isOk()) {
+        return result;
+      }
+      return nextParser.parse(src);
+    });
+  }
+
   public optional(): Parser<Option<T>> {
     return new Parser<Option<T>>((src: string): ParserResult<Option<T>> => {
       const result = this.parseFunction(src);
@@ -164,6 +181,10 @@ export default class Parser<T> {
         value: Option.some(value),
       });
     });
+  }
+
+  public removeLeadingWhitespace(): Parser<T> {
+    return Parser.right(Parser.whitespace().optional(), this);
   }
 
   public many0(): Parser<T[]> {
@@ -183,6 +204,39 @@ export default class Parser<T> {
         src,
         value: items,
       });
+    });
+  }
+
+  public many1(): Parser<T[]> {
+    return new Parser<T[]>((src: string): ParserResult<T[]> => {
+      const originalSrc = src;
+      const items = [];
+      while (true) {
+        const result = this.parse(src);
+        if (result.isErr()) {
+          break;
+        }
+        const { src: newSrc, value } = result.unwrap();
+        src = newSrc;
+        items.push(value);
+      }
+
+      if (items.length === 0) {
+        return Result.err(originalSrc);
+      }
+
+      return Result.ok({
+        src,
+        value: items,
+      });
+    });
+  }
+
+  public inspect(fn: (result: ParserResult<T>) => void): Parser<T> {
+    return new Parser<T>((src: string): ParserResult<T> => {
+      const result = this.parse(src);
+      fn(result);
+      return result;
     });
   }
 }

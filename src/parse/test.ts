@@ -1,7 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 import {
   parse,
-  identParser,
   binaryParser,
   expressionParser,
   blockParser,
@@ -78,7 +77,7 @@ Deno.test("hello world", () => {
 });
 
 Deno.test("statementParser", () => {
-  const result = statementParser("add(x, y);");
+  const result = statementParser().parse("add(x, y);");
   assertEquals(
     result,
     Result.ok({
@@ -91,58 +90,31 @@ Deno.test("statementParser", () => {
 });
 
 Deno.test("paramParser", () => {
-  const result = paramParser({
-    src: "(x, y, z,)",
-    value: new Ident("add"),
-  });
+  const result = paramParser().parse("(x, y, z,)");
   assertEquals(
     result,
     Result.ok({
       src: "",
-      value: [
-        new Ident("add"),
-        [new Ident("x"), new Ident("y"), new Ident("z")],
-      ],
-    }),
-  );
-});
-
-Deno.test("identParser", () => {
-  const result = identParser({
-    src: "   add",
-    value: "fn",
-  });
-  assertEquals(
-    result,
-    Result.ok({
-      src: "",
-      value: new Ident("add"),
+      value: [new Ident("x"), new Ident("y"), new Ident("z")],
     }),
   );
 });
 
 Deno.test("blockParser", () => {
-  const result = blockParser({
-    src: "{ x + y; }",
-    value: [new Ident("add"), [new Ident("x"), new Ident("y")]],
-  });
+  const result = blockParser().parse("{ x + y; }");
   assertEquals(
     result,
     Result.ok({
       src: "",
-      value: [
-        new Ident("add"),
-        [new Ident("x"), new Ident("y")],
-        new Block([
-          new ExprStmt(new Binary(new Ident("x"), new Ident("y"), new Add())),
-        ]),
-      ],
+      value: new Block([
+        new ExprStmt(new Binary(new Ident("x"), new Ident("y"), new Add())),
+      ]),
     }),
   );
 });
 
 Deno.test("expressionParser", () => {
-  const result = expressionParser(" x       + y ");
+  const result = expressionParser().parse(" x       + y ");
   assertEquals(
     result,
     Result.ok({
@@ -154,7 +126,7 @@ Deno.test("expressionParser", () => {
 
 Deno.test("binaryParser", () => {
   assertEquals(
-    binaryParser(" x + y"),
+    binaryParser().parse(" x + y"),
     Result.ok({
       src: "",
       value: new Binary(new Ident("x"), new Ident("y"), new Add()),
@@ -163,12 +135,12 @@ Deno.test("binaryParser", () => {
   );
 
   assertEquals(
-    binaryParser(" 1 + 2 + 3"),
+    binaryParser().parse(" 1 + 2 + 3"),
     Result.ok({
       src: "",
       value: new Binary(
-        new Number("1"),
-        new Binary(new Number("2"), new Number("3"), new Add()),
+        new Binary(new Number("1"), new Number("2"), new Add()),
+        new Number("3"),
         new Add(),
       ),
     }),
@@ -177,7 +149,7 @@ Deno.test("binaryParser", () => {
 });
 
 Deno.test("callParser", () => {
-  const callExpr = callParser("add(x, y)");
+  const callExpr = callParser().parse("add(x, y)");
   assertEquals(
     callExpr,
     Result.ok({
@@ -188,31 +160,28 @@ Deno.test("callParser", () => {
 });
 
 Deno.test("argumentParser", () => {
-  const result = argumentParser({ src: "(x, y)", value: new Ident("add") });
+  const result = argumentParser().parse("(x, y)");
   assertEquals(
     result,
     Result.ok({
       src: "",
-      value: [
-        new Ident("add"),
-        [new Ident("x") as Expression, new Ident("y") as Expression],
-      ],
+      value: [new Ident("x") as Expression, new Ident("y") as Expression],
     }),
   );
 });
 
 Deno.test("primaryParser ident", () => {
-  const result = primaryParser("     add");
+  const result = primaryParser().parse("     add");
   assertEquals(result, Result.ok({ src: "", value: new Ident("add") }));
 });
 
 Deno.test("primaryParser number", () => {
-  const result = primaryParser("     123");
+  const result = primaryParser().parse("     123");
   assertEquals(result, Result.ok({ src: "", value: new Number("123") }));
 });
 
 Deno.test("primaryParser string", () => {
-  const result = primaryParser('"123"');
+  const result = primaryParser().parse('"123"');
   assertEquals(
     result,
     Result.ok({ src: "", value: new StringLiteral('"123"') }),

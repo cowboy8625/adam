@@ -1,4 +1,4 @@
-import { ParserError, parse } from "./parse/mod.ts";
+import { parse } from "./parse/mod.ts";
 import Result from "./utils/result.ts";
 import { Function } from "./ast/mod.ts";
 import { Compiler } from "./codegen/rust/mod.ts";

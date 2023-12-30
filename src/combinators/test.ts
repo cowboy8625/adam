@@ -1,11 +1,11 @@
 import Result from "./../utils/result.ts";
-import Parse from "./mod.ts";
+import Parser from "./mod.ts";
 import type { Success } from "./mod.types.ts";
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 Deno.test("combinators-string", () => {
   assertEquals(
-    Parse.string().parse('"This is a string"'),
+    Parser.string().parse('"This is a string"'),
     Result.ok({
       src: "",
       value: '"This is a string"',
@@ -14,13 +14,13 @@ Deno.test("combinators-string", () => {
 });
 
 Deno.test("combinators-number", () => {
-  const { src, value } = Parse.number().parse("100").unwrap();
+  const { src, value } = Parser.number().parse("100").unwrap();
   const right: Success<string> = { src: "", value: "100" };
   assertEquals(right, { src, value });
 });
 
 Deno.test("combinators-left", () => {
-  const { src, value } = Parse.left(Parse.number(), Parse.tag(")"))
+  const { src, value } = Parser.left(Parser.number(), Parser.tag(")"))
     .parse("100)")
     .unwrap();
   const right: Success<string> = { src: "", value: "100" };
@@ -28,10 +28,10 @@ Deno.test("combinators-left", () => {
 });
 
 Deno.test("combinators-surround", () => {
-  const { src, value } = Parse.surround(
-    Parse.tag("("),
-    Parse.number(),
-    Parse.tag(")"),
+  const { src, value } = Parser.surround(
+    Parser.tag("("),
+    Parser.number(),
+    Parser.tag(")"),
   )
     .parse("(100)")
     .unwrap();
@@ -40,9 +40,9 @@ Deno.test("combinators-surround", () => {
 });
 
 Deno.test("combinators-oneOf", () => {
-  const parser = Parse.oneOf(
-    Parse.number().map((x) => String(x)),
-    Parse.string(),
+  const parser = Parser.oneOf(
+    Parser.number().map((x) => String(x)),
+    Parser.string(),
   );
   // Number
   assertEquals(parser.parse("123").unwrap(), { src: "", value: "123" });
@@ -51,7 +51,7 @@ Deno.test("combinators-oneOf", () => {
 });
 
 Deno.test("combinators-right", () => {
-  const { src, value } = Parse.right(Parse.tag("("), Parse.number())
+  const { src, value } = Parser.right(Parser.tag("("), Parser.number())
     .parse("(100)")
     .unwrap();
   const right: Success<string> = { src: ")", value: "100" };
@@ -59,16 +59,16 @@ Deno.test("combinators-right", () => {
 });
 
 Deno.test("combinators-tag", () => {
-  const result = Parse.tag("foo").parse("foo");
+  const result = Parser.tag("foo").parse("foo");
   const { src, value } = result.unwrap();
   const right: Success<string> = { src: "", value: "foo" };
   assertEquals(right, { src, value });
 });
 
 Deno.test("combinators-many0", () => {
-  const parser = Parse.right(
-    Parse.whitespace().optional(),
-    Parse.number(),
+  const parser = Parser.right(
+    Parser.whitespace().optional(),
+    Parser.number(),
   ).many0();
   const result = parser.parse("123 321 1 2 3").unwrap();
   const right: Success<string[]> = {
@@ -76,4 +76,18 @@ Deno.test("combinators-many0", () => {
     value: ["123", "321", "1", "2", "3"],
   };
   assertEquals(right, result);
+});
+
+Deno.test("combinators-or-simple", () => {
+  const parser = Parser.tag("foo").or(Parser.tag("bar"));
+  assertEquals(parser.parse("foo").unwrap(), { src: "", value: "foo" });
+  assertEquals(parser.parse("bar").unwrap(), { src: "", value: "bar" });
+});
+
+Deno.test("combinators-or-with-map", () => {
+  const parser = Parser.tag<string>("foo")
+    .map((x: string) => x.toUpperCase())
+    .or(Parser.tag<string>("bar"));
+  assertEquals(parser.parse("foo").unwrap(), { src: "", value: "FOO" });
+  assertEquals(parser.parse("bar").unwrap(), { src: "", value: "bar" });
 });
