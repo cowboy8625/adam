@@ -6,10 +6,12 @@ import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 Deno.test("combinators-string", () => {
   assertEquals(
     Parser.string().parse('"This is a string"'),
-    Result.ok({
-      src: "",
-      value: '"This is a string"',
-    } satisfies Success<string>),
+    Result.ok(
+      {
+        src: "",
+        value: '"This is a string"',
+      } satisfies Success<string>,
+    ),
   );
 });
 

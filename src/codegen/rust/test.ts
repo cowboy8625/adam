@@ -1,22 +1,22 @@
 import { Compiler } from "./mod.ts";
 
 import {
-  // Div,
-  // Mul,
-  Sub,
   Add,
-  Unary,
   Binary,
   Block,
   Boolean,
+  Call,
   ExprStmt,
   Function,
   Ident,
   IfElse,
   Let,
   Number,
-  Call,
   StringLiteral,
+  // Div,
+  // Mul,
+  Sub,
+  Unary,
 } from "./../../ast/mod.ts";
 
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";

@@ -39,7 +39,7 @@ async function main() {
   );
   const filePath = Deno.args[1];
   const objectFile = await openFile("object.rs").then((r) =>
-    r.expect("failed to open object.rs"),
+    r.expect("failed to open object.rs")
   );
   const result = await openFile(filePath).then((r) => {
     return r
@@ -59,7 +59,7 @@ async function main() {
           .join("\n");
       })
       .andThen((content: string) =>
-        writeToFile("test.rs", `${objectFile}\n${content}`).mapErr((e) => [e]),
+        writeToFile("test.rs", `${objectFile}\n${content}`).mapErr((e) => [e])
       );
   });
   console.log(result);

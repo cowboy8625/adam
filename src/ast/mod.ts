@@ -1,6 +1,6 @@
-import { FuncParam, AstVisitor, Compile } from "./../codegen/rust/mod.ts";
+import { AstVisitor, Compile, FuncParam } from "./../codegen/rust/mod.ts";
 
-("Hello world \0");
+"Hello world \0";
 
 export type Declaration = Function;
 export type Statement = ExprStmt;

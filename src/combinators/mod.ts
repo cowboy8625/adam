@@ -1,6 +1,6 @@
 import Result from "./../utils/result.ts";
 import Option from "./../utils/option.ts";
-import type { ParserResult, BasicParser, Success } from "./mod.types.ts";
+import type { BasicParser, ParserResult, Success } from "./mod.types.ts";
 
 function regexParser(regex: RegExp): BasicParser<string> {
   return (src: string): ParserResult<string> => {
@@ -119,7 +119,7 @@ export default class Parser<T> {
 
   public then<U>(nextParser: Parser<U>): Parser<U> {
     return new Parser<U>((src: string) =>
-      this.parse(src).andThen(({ src }: Success<T>) => nextParser.parse(src)),
+      this.parse(src).andThen(({ src }: Success<T>) => nextParser.parse(src))
     );
   }
 

@@ -1,26 +1,26 @@
 import * as std from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 import {
-  Div,
-  Mul,
-  Sub,
   Add,
+  Array,
   Binary,
-  Unary,
   Block,
   Boolean,
+  Call,
+  Div,
   Expression,
   ExprStmt,
   Function,
   Ident,
   IfElse,
-  Array,
   Let,
+  Mul,
   Number,
   Op,
   Statement,
-  Call,
   StringLiteral,
+  Sub,
+  Unary,
 } from "./../../ast/mod.ts";
 
 export interface Compile {
@@ -129,9 +129,11 @@ ${stmts}
   visitCall(node: Call): string {
     const name = this.visit(node.value);
     if (name === "print") {
-      return `println!("{}", ${node.args
-        .map((arg) => this.visit(arg))
-        .join(", ")})`;
+      return `println!("{}", ${
+        node.args
+          .map((arg) => this.visit(arg))
+          .join(", ")
+      })`;
     }
     const args = node.args.map((arg) => this.visit(arg)).join(", ");
     return `${name}(${args})`;
