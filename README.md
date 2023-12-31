@@ -25,7 +25,7 @@ The above example demonstrates a simple "Hello, World!" program in Adam. Despite
 To start using Adam, follow these steps:
 
 1. **Install the Adam Compiler:**
-   - ```bash
+   ```bash
    $ git clone https://github.com/cowboy8625/adam
    $ cd adam
    ```
@@ -33,7 +33,6 @@ To start using Adam, follow these steps:
 2. **Write Your First Program:**
    - Create a new Adam source file, for example, `hello.adam`.
    - Write your code using Adam syntax.
-
      ```rust
      fn main() {
          print("Hello, Adam!");

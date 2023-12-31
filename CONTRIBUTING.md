@@ -6,7 +6,7 @@ Thank you for considering contributing to Adam! This document outlines the guide
 
 ## Code of Conduct
 
-Before contributing, please read and adhere to our [Code of Conduct](CODE_OF_CONDUCT.md). We aim to foster a positive and inclusive community.
+Before contributing, please read and adhere to our [Code of Conduct](CODE_OF_CONDUCT.md). We aim to foster a positive community.
 
 ## How to Contribute
 
