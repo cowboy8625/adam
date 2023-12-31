@@ -5,26 +5,28 @@ import {
   Binary,
   Block,
   Call,
-  Declaration,
   Div,
   Expression,
   ExprStmt,
   Function,
   Ident,
-  Let,
   Mul,
   Not,
   Number,
-  Op,
   Statement,
   StringLiteral,
   Sub,
   Unary,
 } from "../ast/mod.ts";
 import Parser from "../combinators/mod.ts";
-import type { ParserResult } from "../combinators/mod.types.ts";
 
 export type ParserError = "Nothing";
+
+// function deno_stdin(msg: string) {
+//   console.log(msg);
+//   const buffer = new Uint8Array(1024);
+//   Deno.stdin.readSync(buffer);
+// }
 
 export function num(): Parser<Expression> {
   return Parser.number()
@@ -45,19 +47,26 @@ export function ident(): Parser<Expression> {
 }
 
 export function primary(): Parser<Expression> {
+  // deno_stdin("primary");
   return num().or(str()).or(ident());
 }
 
 export function call(): Parser<Expression> {
-  return ident().andThen(Parser.surround(
-    Parser.tag("("),
-    Parser.left(expression(), Parser.tag(",").optional()).many0(),
-    Parser.tag(")"),
-  )).map(([ident, args]) => new Call(ident as Ident, args) as Expression)
-    .or(primary());
+  // deno_stdin("call");
+  return primary().or(
+    ident().andThen(Parser.surround(
+      Parser.tag("("),
+      Parser.left(
+        primary(), // expression(),  should be expression but that cause inifinite loop 😭
+        Parser.tag(",").optional(),
+      ).many0(),
+      Parser.tag(")"),
+    )).map(([ident, args]) => new Call(ident as Ident, args) as Expression),
+  );
 }
 
 export function unary(): Parser<Expression> {
+  // deno_stdin("unary");
   return Parser.oneOf(
     Parser.tag("!"),
     Parser.tag("-"),
@@ -71,11 +80,11 @@ export function unary(): Parser<Expression> {
         return new Unary(new Sub(), expr) as Expression;
       }
       std.unreachable();
-    })
-    .or(call());
+    }).or(call());
 }
 
 export function factor(): Parser<Expression> {
+  // deno_stdin("factor");
   return unary()
     .andThen(
       Parser.oneOf(Parser.tag("*"), Parser.tag("/")).andThen(unary()).many1(),
@@ -90,14 +99,15 @@ export function factor(): Parser<Expression> {
         }
         std.unreachable();
       }, lhs);
-    })
-    .or(unary());
+    }).or(unary());
 }
 
 export function term(): Parser<Expression> {
+  // deno_stdin("term");
   return factor()
     .andThen(
-      Parser.oneOf(Parser.tag("+"), Parser.tag("-")).andThen(factor()).many1(),
+      Parser.oneOf(Parser.tag("+"), Parser.tag("-")).andThen(factor())
+        .many1(),
     )
     .map(([lhs, rest]) => {
       return rest.reduce((lhs, [op, rhs]) => {
@@ -109,21 +119,25 @@ export function term(): Parser<Expression> {
         }
         std.unreachable();
       }, lhs);
-    })
-    .or(factor());
+    }).or(
+      factor(),
+    );
 }
 
 export function expression(): Parser<Expression> {
+  // deno_stdin("expression");
   return term();
 }
 
 export function statement(): Parser<Statement> {
+  // deno_stdin("statement");
   return expression()
     .andThen(Parser.tag(";"))
     .map(([expr, _]) => new ExprStmt(expr));
 }
 
 export function block(): Parser<Block> {
+  // deno_stdin("block");
   return Parser.tag("{")
     .removeLeadingWhitespace()
     .andThen(statement().many0())
@@ -132,6 +146,7 @@ export function block(): Parser<Block> {
 }
 
 export function params(): Parser<Expression[]> {
+  // deno_stdin("params");
   return Parser.tag("(")
     .then(expression().many0())
     .andThen(Parser.tag(")"))
@@ -139,6 +154,7 @@ export function params(): Parser<Expression[]> {
 }
 
 export function func(): Parser<Function> {
+  // deno_stdin("params");
   return Parser.tag("fn")
     .then(ident())
     .andThen(params().map((x) => x as Ident[]))

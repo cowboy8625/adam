@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { factor, num, parse, term, unary } from "./mod.ts";
+import { call, factor, num, parse, primary, term, unary } from "./mod.ts";
 import {
   Add,
   Binary,
@@ -40,6 +40,42 @@ Deno.test("parse number", () => {
   );
 });
 
+Deno.test("parse primary", () => {
+  assertEquals(
+    primary().parse("1"),
+    Result.ok({ src: "", value: new Number("1") }),
+  );
+
+  assertEquals(
+    primary().parse("number"),
+    Result.ok({ src: "", value: new Ident("number") }),
+  );
+
+  assertEquals(
+    primary().parse('"1 + 1"'),
+    Result.ok({ src: "", value: new StringLiteral('"1 + 1"') }),
+  );
+});
+
+Deno.test("parse call", () => {
+  assertEquals(
+    call().parse("add(123, 321)"),
+    Result.ok({
+      src: "",
+      value: new Call(new Ident("add"), [new Number("123"), new Number("321")]),
+    }),
+  );
+
+  assertEquals(
+    call().parse("add(123 + 321)"),
+    Result.ok({
+      src: "",
+      value: new Call(new Ident("add"), [
+        new Binary(new Add(), new Number("123"), new Number("321")),
+      ]),
+    }),
+  );
+});
 Deno.test("parse unary", () => {
   assertEquals(
     unary().parse("-1"),

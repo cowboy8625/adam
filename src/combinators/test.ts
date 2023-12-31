@@ -3,6 +3,46 @@ import Parser from "./mod.ts";
 import type { Success } from "./mod.types.ts";
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
+Deno.test("combinators-then", () => {
+  const p1 = Parser.number()
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.tag(","))
+    .then(Parser.number())
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.tag(","))
+    .then(Parser.number())
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.tag(","))
+    .then(Parser.number())
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.identifier())
+    .then(Parser.number())
+    .then(Parser.tag(","))
+    .then(Parser.number())
+    .then(Parser.identifier());
+
+  const { src, value } = p1
+    .then(p1)
+    .then(p1)
+    .then(p1)
+    .then(p1)
+    .then(p1)
+    .parse(
+      "100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k100abc200,1k",
+    )
+    .unwrap();
+  const right: Success<string> = { src: "", value: "k" };
+  assertEquals(right, { src, value });
+});
+
 Deno.test("combinators-string", () => {
   assertEquals(
     Parser.string().parse('"This is a string"'),
