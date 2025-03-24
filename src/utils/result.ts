@@ -11,7 +11,7 @@ export class Ok<T, E> {
   }
 
   public mapErr<F>(_: (err: E) => F): Result<T, F> {
-    return new Ok(this.value); // `Err` stays unchanged
+    return new Ok(this.value);
   }
 
   public andThen<U>(fn: (val: T) => Result<U, E>): Result<U, E> {
@@ -81,7 +81,7 @@ export class Err<T, E> {
   }
 
   public or<U>(res: Result<U, E>): Result<U, E> {
-    return res; // Return the alternative Result
+    return res;
   }
 
   public orElse<U>(fn: (err: E) => Result<U, E>): Result<U, E> {
