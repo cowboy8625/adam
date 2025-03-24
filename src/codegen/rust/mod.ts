@@ -63,17 +63,19 @@ export class FuncParam implements Compile {
 export class Compiler implements AstVisitor {
   visitFunction(node: Function): string {
     const name = this.visit(node.name);
+    let params = "";
     const block = this.visit(node.block);
     if (name === "main") {
-      return `fn ${name}() ${block}`;
+      return `fn ${name}() {\n${block}\n}`;
     }
-    // FIXME: Not sure how to fix this just yet
-    // node.params.reverse().forEach((ident, index) => {
-    //   node.block.pushToStart(
-    //     new FuncParam(ident, node.params.length - index - 1),
-    //   );
-    // });
-    return `fn ${name}(args: Vec<Object>) -> Object ${block}`;
+
+    node.params.reverse().forEach((ident, index) => {
+      const param = new FuncParam(ident, node.params.length - index - 1);
+      params += this.visit(param);
+      params += "\n";
+    });
+
+    return `fn ${name}(args: Vec<Object>) -> Object {\n${params}\n${block}\n}`;
   }
 
   visitFuncParam(node: FuncParam): string {
@@ -85,9 +87,7 @@ export class Compiler implements AstVisitor {
     const stmts = node.block
       .map((stmt: FuncParam | Statement | Expression) => this.visit(stmt))
       .join("\n");
-    return `{
-${stmts}
-}`;
+    return `${stmts}`;
   }
 
   visitLet(node: Let): string {
@@ -110,7 +110,7 @@ ${stmts}
     const thenBranch = this.visit(node.thenBranch);
     const blockOrIfElse = node?.elseBranch ? " else " : "";
     const elseBranch = node?.elseBranch ? this.visit(node.elseBranch) : "";
-    return `if ${condition}.unwrap_boolean_or_default() ${thenBranch}${blockOrIfElse}${elseBranch}`;
+    return `if ${condition}.unwrap_boolean_or_default() {\n${thenBranch}\n}${blockOrIfElse}{\n${elseBranch}\n}`;
   }
 
   visitBinary(node: Binary): string {
@@ -129,11 +129,9 @@ ${stmts}
   visitCall(node: Call): string {
     const name = this.visit(node.value);
     if (name === "print") {
-      return `println!("{}", ${
-        node.args
-          .map((arg) => this.visit(arg))
-          .join(", ")
-      })`;
+      return `println!("{}", ${node.args
+        .map((arg) => this.visit(arg))
+        .join(", ")})`;
     }
     const args = node.args.map((arg) => this.visit(arg)).join(", ");
     return `${name}(${args})`;

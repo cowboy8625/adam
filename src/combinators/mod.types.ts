@@ -1,4 +1,4 @@
-import Result from "../utils/result.ts";
+import { type Result as ResultType } from "../utils/result.ts";
 
 export type Success<T> = {
   src: string;
@@ -10,6 +10,6 @@ export type Failure<E> = {
   value: E;
 };
 
-export type ParserResult<T> = Result<Success<T>, string>;
+export type ParserResult<T> = ResultType<Success<T>, string>;
 
-export type BasicParser<T> = (src: string) => Result<Success<T>, string>;
+export type BasicParser<T> = (src: string) => ResultType<Success<T>, string>;

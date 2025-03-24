@@ -36,12 +36,12 @@ Deno.test("code-gen-hello-world", () => {
   console.log(left);
 });
 
-Deno.test("code-gen-Funciton", () => {
+Deno.test("code-gen-Function", () => {
   const op = new Add();
   const xIdent = new Ident("x");
   const yIdent = new Ident("y");
 
-  const expr = new ExprStmt(new Binary(xIdent, yIdent, op));
+  const expr = new ExprStmt(new Binary(op, xIdent, yIdent));
   const block = new Block([expr]);
 
   const params = [xIdent, yIdent];
@@ -53,9 +53,10 @@ Deno.test("code-gen-Funciton", () => {
   const compiler = new Compiler();
   const left = compiler.compile(func);
   const right = `fn add(args: Vec<Object>) -> Object {
-let x = args[0].clone();
 let y = args[1].clone();
-x + y
+let x = args[0].clone();
+
+x + y;
 }`;
   assertEquals(right, left);
 });
@@ -65,12 +66,12 @@ Deno.test("code-gen-Block", () => {
   const left1 = new Ident("left1");
   const right1 = new Ident("right1");
 
-  const expr1 = new Binary(left1, right1, op);
+  const expr1 = new Binary(op, left1, right1);
 
   const left2 = new Ident("left2");
   const right2 = new Ident("right2");
 
-  const expr2 = new Binary(left2, right2, op);
+  const expr2 = new Binary(op, left2, right2);
 
   const firstBinding = new Ident("foo");
   const letBinding1 = new ExprStmt(new Let(firstBinding, expr1));
@@ -83,10 +84,8 @@ Deno.test("code-gen-Block", () => {
   const compiler = new Compiler();
   const left = compiler.compile(block);
 
-  const right = `{
-let mut foo = left1 + right1;
-let mut bar = left2 + right2;
-}`;
+  const right = `let mut foo = left1 + right1;
+let mut bar = left2 + right2;`;
   assertEquals(right, left);
 });
 
@@ -94,7 +93,7 @@ Deno.test("code-gen-Let", () => {
   const identLeft = new Ident("a");
   const identRight = new Ident("b");
   const op = new Add();
-  const bin = new Binary(identLeft, identRight, op);
+  const bin = new Binary(op, identLeft, identRight);
   const name = new Ident("foo");
   const letBinding = new Let(name, bin);
   const compiler = new Compiler();
@@ -111,9 +110,9 @@ Deno.test("code-gen-IfElse", () => {
   const compiler = new Compiler();
   const left = compiler.compile(ifElse);
   const right = `if Object::Boolean(true).unwrap_boolean_or_default() {
-Object::Number(1);
+Object::Number(1.0);
 } else {
-Object::Number(2);
+Object::Number(2.0);
 }`;
   assertEquals(right, left);
 });
@@ -122,7 +121,7 @@ Deno.test("code-gen-Binary", () => {
   const identLeft = new Ident("a");
   const identRight = new Ident("b");
   const op = new Add();
-  const bin = new Binary(identLeft, identRight, op);
+  const bin = new Binary(op, identLeft, identRight);
   const compiler = new Compiler();
   const left = compiler.compile(bin);
   const right = `a + b`;
@@ -131,11 +130,11 @@ Deno.test("code-gen-Binary", () => {
 
 Deno.test("code-gen-Unary", () => {
   const op = new Sub();
-  const num = new Number("123");
+  const num = new Number("123.0");
   const unary = new Unary(op, num);
   const compiler = new Compiler();
   const left = compiler.compile(unary);
-  const right = `-Object::Number(123)`;
+  const right = `-Object::Number(123.0)`;
   assertEquals(right, left);
 });
 

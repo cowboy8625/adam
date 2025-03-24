@@ -1,98 +1,123 @@
-export default class Result<T, E> {
-  private constructor(
-    private readonly kind: "Ok" | "Err",
-    private readonly value: T | E,
-  ) {}
+export class Ok<T, E> {
+  public readonly ok = true;
+  public readonly value: T;
 
-  public static ok<T, E>(value: T): Result<T, E> {
-    return new Result<T, E>("Ok", value);
+  constructor(value: T) {
+    this.value = value;
   }
 
-  public static err<T, E>(error: E): Result<T, E> {
-    return new Result<T, E>("Err", error);
+  public map<U>(fn: (val: T) => U): Result<U, E> {
+    return new Ok(fn(this.value));
   }
 
-  public map<U>(fn: (value: T) => U): Result<U, E> {
-    if (this.kind === "Ok") {
-      return Result.ok(fn(this.value as T));
-    }
-    return Result.err(this.value as E);
+  public mapErr<F>(_: (err: E) => F): Result<T, F> {
+    return new Ok(this.value); // `Err` stays unchanged
   }
 
-  public mapErr<U>(fn: (error: E) => U): Result<T, U> {
-    if (this.kind === "Err") {
-      return Result.err(fn(this.value as E));
-    }
-    return Result.ok(this.value as T);
-  }
-
-  public andThen<U>(fn: (value: T) => Result<U, E>): Result<U, E> {
-    if (this.kind === "Ok") {
-      return fn(this.value as T);
-    }
-    return Result.err(this.value as E);
-  }
-
-  public isOk(): boolean {
-    return this.kind === "Ok";
-  }
-
-  public isErr(): boolean {
-    return this.kind === "Err";
+  public andThen<U>(fn: (val: T) => Result<U, E>): Result<U, E> {
+    return fn(this.value);
   }
 
   public unwrap(): T {
-    if (this.kind === "Ok") {
-      return this.value as T;
-    }
-    throw new Error(
-      `Result is Err and cannot be unwrapped as an '${this.value}'`,
-    );
+    return this.value;
   }
 
-  public unwrapErr(): E {
-    if (this.kind === "Err") {
-      return this.value as E;
-    }
-    throw new Error(
-      `Result is Ok and cannot be unwrapped as an '${this.value}'`,
-    );
+  public unwrapOr(_: T): T {
+    return this.value;
   }
 
-  public orElse<U>(fn: (error: E) => Result<T, U>): Result<T, U> {
-    if (this.kind === "Ok") {
-      return Result.ok(this.value as T);
-    }
-    return fn(this.value as E);
+  public unwrapOrElse(_: () => T): T {
+    return this.value;
   }
 
-  public or(other: Result<T, E>): Result<T, E> {
-    if (this.kind === "Ok") {
-      return Result.ok(this.value as T);
-    }
-    return other;
-  }
-
-  public inspect(fn: (value: T) => void): Result<T, E> {
-    if (this.kind === "Ok") {
-      fn(this.value as T);
-    }
-
+  public or<U>(_: Result<U, E>): Result<T, E> {
     return this;
   }
 
-  public expect(message: string): T {
-    if (this.kind === "Ok") {
-      return this.value as T;
-    }
-    throw new Error(message);
+  public orElse<U>(_: (err: E) => Result<U, E>): Result<T, E> {
+    return this;
   }
+
+  public expect(_: string): T {
+    return this.value;
+  }
+
+  public inspect(fn: (val: T) => void): Result<T, E> {
+    fn(this.value);
+    return this;
+  }
+}
+
+export class Err<T, E> {
+  public readonly ok = false;
+  public readonly error: E;
+
+  constructor(error: E) {
+    this.error = error;
+  }
+
+  public map<U>(_: (val: T) => U): Result<U, E> {
+    return new Err(this.error);
+  }
+
+  public mapErr<F>(fn: (err: E) => F): Result<T, F> {
+    return new Err(fn(this.error));
+  }
+
+  public andThen<U>(_: (val: T) => Result<U, E>): Result<U, E> {
+    return new Err(this.error);
+  }
+
+  public unwrap(): never {
+    throw new Error(`Tried to unwrap an Err: ${this.error}`);
+  }
+
+  public unwrapOr(defaultValue: T): T {
+    return defaultValue;
+  }
+
+  public unwrapOrElse(fn: () => T): T {
+    return fn();
+  }
+
+  public or<U>(res: Result<U, E>): Result<U, E> {
+    return res; // Return the alternative Result
+  }
+
+  public orElse<U>(fn: (err: E) => Result<U, E>): Result<U, E> {
+    return fn(this.error);
+  }
+
+  public expect(message: string): never {
+    throw new Error(`${message}: ${this.error}`);
+  }
+
+  public inspect(_: (val: T) => void): Result<T, E> {
+    return this;
+  }
+}
+
+export type Result<T, E> = Ok<T, E> | Err<T, E>;
+
+export function ok<T, E = never>(value: T): Result<T, E> {
+  return new Ok(value);
+}
+
+export function err<E, T = never>(error: E): Result<T, E> {
+  return new Err(error);
 }
 
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
 
 Deno.test("result-test", () => {
-  const left: Result<number, string> = Result.ok(1);
-  const right: Result<number, string> = Result.ok(1);
+  const left: Result<number, string> = ok(1);
+  const right: Result<number, string> = ok(1);
   assertEquals(right.unwrap(), left.unwrap());
 });
+
+export default {
+  Ok,
+  Err,
+  ok,
+  err,
+};

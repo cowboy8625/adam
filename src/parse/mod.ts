@@ -1,5 +1,5 @@
 import * as std from "https://deno.land/std@0.200.0/assert/mod.ts";
-import Result from "../utils/result.ts";
+import { type Result as ResultType } from "../utils/result.ts";
 import {
   Add,
   Binary,
@@ -18,156 +18,167 @@ import {
   Sub,
   Unary,
 } from "../ast/mod.ts";
+
 import Parser from "../combinators/mod.ts";
 
-export type ParserError = "Nothing";
+export type ParserError = string;
 
-// function deno_stdin(msg: string) {
-//   console.log(msg);
-//   const buffer = new Uint8Array(1024);
-//   Deno.stdin.readSync(buffer);
-// }
+function isIdent(e: Expression): e is Ident {
+  return e instanceof Ident;
+}
 
 export function num(): Parser<Expression> {
   return Parser.number()
     .removeLeadingWhitespace()
-    .map((x) => new Number(x) as Expression);
+    .map((x): Expression => new Number(x));
 }
 
 export function str(): Parser<Expression> {
   return Parser.string()
     .removeLeadingWhitespace()
-    .map((x) => new StringLiteral(x) as Expression);
+    .map((x) => new StringLiteral(x));
 }
 
 export function ident(): Parser<Expression> {
   return Parser.identifier()
     .removeLeadingWhitespace()
-    .map((x) => new Ident(x) as Expression);
+    .map((x) => new Ident(x));
 }
 
 export function primary(): Parser<Expression> {
-  // deno_stdin("primary");
-  return num().or(str()).or(ident());
-}
-
-export function call(): Parser<Expression> {
-  // deno_stdin("call");
-  return primary().or(
-    ident().andThen(Parser.surround(
-      Parser.tag("("),
-      Parser.left(
-        primary(), // expression(),  should be expression but that cause inifinite loop 😭
-        Parser.tag(",").optional(),
-      ).many0(),
-      Parser.tag(")"),
-    )).map(([ident, args]) => new Call(ident as Ident, args) as Expression),
-  );
-}
-
-export function unary(): Parser<Expression> {
-  // deno_stdin("unary");
-  return Parser.oneOf(
-    Parser.tag("!"),
-    Parser.tag("-"),
-  )
-    .andThen(call())
-    .map(([op, expr]) => {
-      if (op === "!") {
-        return new Unary(new Not(), expr) as Expression;
-      }
-      if (op === "-") {
-        return new Unary(new Sub(), expr) as Expression;
-      }
-      std.unreachable();
-    }).or(call());
-}
-
-export function factor(): Parser<Expression> {
-  // deno_stdin("factor");
-  return unary()
-    .andThen(
-      Parser.oneOf(Parser.tag("*"), Parser.tag("/")).andThen(unary()).many1(),
-    )
-    .map(([lhs, rest]) => {
-      return rest.reduce((lhs, [op, rhs]) => {
-        if (op === "*") {
-          return new Binary(new Mul(), lhs, rhs) as Expression;
-        }
-        if (op === "/") {
-          return new Binary(new Div(), lhs, rhs) as Expression;
-        }
-        std.unreachable();
-      }, lhs);
-    }).or(unary());
-}
-
-export function term(): Parser<Expression> {
-  // deno_stdin("term");
-  return factor()
-    .andThen(
-      Parser.oneOf(Parser.tag("+"), Parser.tag("-")).andThen(factor())
-        .many1(),
-    )
-    .map(([lhs, rest]) => {
-      return rest.reduce((lhs, [op, rhs]) => {
-        if (op === "+") {
-          return new Binary(new Add(), lhs, rhs) as Expression;
-        }
-        if (op === "-") {
-          return new Binary(new Sub(), lhs, rhs) as Expression;
-        }
-        std.unreachable();
-      }, lhs);
-    }).or(
-      factor(),
+  return num()
+    .or(str)
+    .or(ident)
+    .or(() =>
+      Parser.surround(Parser.literal("("), expression(), Parser.literal(")")),
     );
 }
 
+export function functionArgs(): Parser<Expression[]> {
+  return Parser.surround(
+    Parser.literal("("),
+    Parser.left(expression(), Parser.literal(",").optional()).many0(),
+    Parser.literal(")"),
+  );
+}
+
+export function call(): Parser<Expression> {
+  return ident()
+    .andThen(() => functionArgs().optional())
+    .map(([ident, args]): Expression => {
+      if (!isIdent(ident)) std.unreachable();
+      return new Call(ident, args.unwrap());
+    })
+    .or(primary);
+}
+
+export function unary(): Parser<Expression> {
+  const notParser = Parser.literal("!").removeLeadingWhitespace();
+  const minusParser = Parser.literal("-").removeLeadingWhitespace();
+  const prefixParser = notParser.or(minusParser).many0();
+
+  return prefixParser
+    .andThen(call)
+    .map(([ops, expr]) =>
+      ops.reduce((acc, op) => {
+        if (op === "!") return new Unary(new Not(), acc);
+        if (op === "-") return new Unary(new Sub(), acc);
+        std.unreachable();
+      }, expr),
+    )
+    .or(call);
+}
+
+export function factor(): Parser<Expression> {
+  const op = Parser.oneOf(Parser.literal("*"), Parser.literal("/"))
+    .removeLeadingWhitespace()
+    .andThen(unary)
+    .many1();
+
+  return unary()
+    .andThen(op)
+    .map(([lhs, rest]) => {
+      return rest.reduce<Expression>((lhs, [op, rhs]) => {
+        if (op === "*") {
+          return new Binary(new Mul(), lhs, rhs);
+        } else if (op === "/") {
+          return new Binary(new Div(), lhs, rhs);
+        }
+        std.unreachable();
+      }, lhs);
+    })
+    .or(unary);
+}
+
+export function term(): Parser<Expression> {
+  const op = Parser.oneOf(Parser.literal("+"), Parser.literal("-"))
+    .removeLeadingWhitespace()
+    .andThen(factor)
+    .many1();
+
+  return factor()
+    .andThen(op)
+    .map(([lhs, rest]) => {
+      return rest.reduce<Expression>((lhs, [op, rhs]) => {
+        if (op === "+") {
+          return new Binary(new Add(), lhs, rhs);
+        }
+        if (op === "-") {
+          return new Binary(new Sub(), lhs, rhs);
+        }
+        std.unreachable();
+      }, lhs);
+    })
+    .or(factor);
+}
+
 export function expression(): Parser<Expression> {
-  // deno_stdin("expression");
   return term();
 }
 
 export function statement(): Parser<Statement> {
-  // deno_stdin("statement");
   return expression()
-    .andThen(Parser.tag(";"))
+    .andThen(() => Parser.literal(";").removeLeadingWhitespace())
     .map(([expr, _]) => new ExprStmt(expr));
 }
 
 export function block(): Parser<Block> {
-  // deno_stdin("block");
-  return Parser.tag("{")
+  return Parser.literal("{")
     .removeLeadingWhitespace()
-    .andThen(statement().many0())
-    .andThen(Parser.tag("}").removeLeadingWhitespace())
+    .andThen(() => statement().many0())
+    .andThen(() => Parser.literal("}").removeLeadingWhitespace())
     .map(([[_, stmts], __]) => new Block(stmts));
 }
 
-export function params(): Parser<Expression[]> {
-  // deno_stdin("params");
-  return Parser.tag("(")
-    .then(expression().many0())
-    .andThen(Parser.tag(")"))
-    .map(([expr, _]) => expr);
+export function params(): Parser<Ident[]> {
+  return Parser.surround(
+    Parser.literal("("),
+    Parser.left(
+      ident().map((x) => x as Ident),
+      Parser.literal(",").optional(),
+    ).many0(),
+    Parser.literal(")"),
+  );
 }
 
 export function func(): Parser<Function> {
-  // deno_stdin("params");
-  return Parser.tag("fn")
-    .then(ident())
-    .andThen(params().map((x) => x as Ident[]))
-    .andThen(block())
-    .map(
-      ([[name, params], block]) => new Function(name as Ident, params, block),
-    );
+  return Parser.literal("fn")
+    .removeLeadingWhitespace()
+    .then(ident)
+    .andThen(() => params().map((x) => x.filter(isIdent)))
+    .andThen(block)
+    .map(([[name, params], body]) => {
+      if (!isIdent(name)) {
+        std.unreachable();
+      }
+      return new Function(name, params, body);
+    });
 }
 
-export function parse(src: string): Result<Function[], ParserError[]> {
+export function parse(src: string): ResultType<Function[], ParserError[]> {
   return func()
     .many0()
     .parse(src)
     .map(({ value }) => value)
-    .orElse((_) => Result.err(["Nothing"]));
+    .mapErr<string[]>((err) => [err]);
 }

@@ -1,17 +1,27 @@
 import { assertEquals } from "https://deno.land/std@0.200.0/assert/mod.ts";
-import { call, factor, num, parse, primary, term, unary } from "./mod.ts";
+import {
+  func,
+  block,
+  call,
+  expression,
+  factor,
+  functionArgs,
+  num,
+  parse,
+  primary,
+  term,
+  unary,
+} from "./mod.ts";
 import {
   Add,
   Binary,
   Block,
   Call,
   Div,
-  Expression,
   ExprStmt,
   Function,
   Ident,
   Mul,
-  Not,
   Number,
   StringLiteral,
   Sub,
@@ -30,6 +40,22 @@ Deno.test("parse function", () => {
         new Block([new ExprStmt(new Number("1"))]),
       ),
     ]),
+  );
+
+  assertEquals(
+    func().parse(`
+fn main() {
+    print(1);
+}
+`),
+    Result.ok({
+      src: "",
+      value: new Function(
+        new Ident("main"),
+        [],
+        new Block([new ExprStmt(new Number("1"))]),
+      ),
+    }),
   );
 });
 
@@ -75,11 +101,28 @@ Deno.test("parse call", () => {
       ]),
     }),
   );
+
+  assertEquals(
+    call().parse('print("hello there")'),
+    Result.ok({
+      src: "",
+      value: new Call(new Ident("print"), [new StringLiteral('"hello there"')]),
+    }),
+  );
 });
+
 Deno.test("parse unary", () => {
   assertEquals(
     unary().parse("-1"),
     Result.ok({ src: "", value: new Unary(new Sub(), new Number("1")) }),
+  );
+
+  assertEquals(
+    unary().parse("--1"),
+    Result.ok({
+      src: "",
+      value: new Unary(new Sub(), new Unary(new Sub(), new Number("1"))),
+    }),
   );
 });
 
@@ -155,6 +198,59 @@ Deno.test("parse term", () => {
         ),
         new Number("23"),
       ),
+    }),
+  );
+});
+
+Deno.test("parse function args", () => {
+  assertEquals(
+    functionArgs().parse("(1 + 1)"),
+    Result.ok({
+      src: "",
+      value: [new Binary(new Add(), new Number("1"), new Number("1"))],
+    }),
+  );
+});
+
+Deno.test("parse expression", () => {
+  assertEquals(
+    expression().parse("1+1"),
+    Result.ok({
+      src: "",
+      value: new Binary(new Add(), new Number("1"), new Number("1")),
+    }),
+  );
+  assertEquals(
+    expression().parse("1 + 1"),
+    Result.ok({
+      src: "",
+      value: new Binary(new Add(), new Number("1"), new Number("1")),
+    }),
+  );
+
+  assertEquals(
+    expression().parse('print("Hello, Adam!")'),
+    Result.ok({
+      src: "",
+      value: new Call(new Ident("print"), [
+        new StringLiteral('"Hello, Adam!"'),
+      ]),
+    }),
+  );
+});
+
+Deno.test("parse block", () => {
+  const input = '{print("Hello, Adam!");}';
+  const result = block().parse(input);
+  assertEquals(
+    result,
+    Result.ok({
+      src: "",
+      value: new Block([
+        new ExprStmt(
+          new Call(new Ident("print"), [new StringLiteral('"Hello, Adam!"')]),
+        ),
+      ]),
     }),
   );
 });

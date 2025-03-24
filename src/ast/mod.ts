@@ -1,6 +1,6 @@
-import { AstVisitor, Compile, FuncParam } from "./../codegen/rust/mod.ts";
+import { AstVisitor, Compile } from "./../codegen/rust/mod.ts";
 
-"Hello world \0";
+("Hello world \0");
 
 export type Declaration = Function;
 export type Statement = ExprStmt;
@@ -240,7 +240,7 @@ export class Sub implements Compile {
 export class Mul implements Compile {
   op: string;
   constructor() {
-    this.op = "-";
+    this.op = "*";
   }
 
   accept(visitor: AstVisitor): string {
