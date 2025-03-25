@@ -13,6 +13,7 @@ import {
   Mul,
   Not,
   Number,
+  ReturnStmt,
   Statement,
   StringLiteral,
   Sub,
@@ -64,10 +65,10 @@ export function functionArgs(): Parser<Expression[]> {
 
 export function call(): Parser<Expression> {
   return ident()
-    .andThen(() => functionArgs().optional())
+    .andThen(() => functionArgs())
     .map(([ident, args]): Expression => {
       if (!isIdent(ident)) std.unreachable();
-      return new Call(ident, args.unwrap());
+      return new Call(ident, args);
     })
     .or(primary);
 }
@@ -136,10 +137,22 @@ export function expression(): Parser<Expression> {
   return term();
 }
 
-export function statement(): Parser<Statement> {
+export function expressionStmt(): Parser<Statement> {
   return expression()
     .andThen(() => Parser.literal(";").removeLeadingWhitespace())
     .map(([expr, _]) => new ExprStmt(expr));
+}
+
+export function returnStmt(): Parser<Statement> {
+  return Parser.surround(
+    Parser.literal("return").removeLeadingWhitespace(),
+    expression().optional(),
+    Parser.literal(";").removeLeadingWhitespace(),
+  ).map((value) => new ReturnStmt(value));
+}
+
+export function statement(): Parser<Statement> {
+  return returnStmt().or(expressionStmt());
 }
 
 export function block(): Parser<Block> {

@@ -3,6 +3,16 @@ import Result, { type Result as ResultType } from "./utils/result.ts";
 import { Function } from "./ast/mod.ts";
 import { Compiler } from "./codegen/rust/mod.ts";
 
+function isRustcInstalled(): boolean {
+  try {
+    const command = new Deno.Command("rustc", { args: ["--version"] });
+    const { success } = command.outputSync();
+    return success;
+  } catch {
+    return false;
+  }
+}
+
 async function openFile(filename: string): Promise<ResultType<string, Error>> {
   try {
     return Result.ok(await Deno.readTextFile(filename));
@@ -39,6 +49,10 @@ function displayAstDebug(flag: boolean) {
 }
 
 async function main() {
+  if (!isRustcInstalled) {
+    console.error("rustc is not installed");
+    Deno.exit(1);
+  }
   if (Deno.args.length < 1) {
     console.error("Please provide a file path as an argument");
     Deno.exit(1);

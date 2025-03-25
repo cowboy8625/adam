@@ -1,5 +1,3 @@
-Certainly! Here's a sample contribution guideline for an open-source programming language project like Adam:
-
 # Contribution Guidelines
 
 Thank you for considering contributing to Adam! This document outlines the guidelines for contributing to our open-source programming language project. By participating, you agree to abide by these guidelines and collaborate respectfully with other contributors.

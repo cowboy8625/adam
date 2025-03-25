@@ -11,6 +11,7 @@ import {
   primary,
   term,
   unary,
+  returnStmt,
 } from "./mod.ts";
 import {
   Add,
@@ -23,12 +24,14 @@ import {
   Ident,
   Mul,
   Number,
+  ReturnStmt,
   StringLiteral,
   Sub,
   Unary,
 } from "../ast/mod.ts";
 
 import Result from "../utils/result.ts";
+import Option from "../utils/option.ts";
 
 Deno.test("parse function", () => {
   assertEquals(
@@ -46,14 +49,15 @@ Deno.test("parse function", () => {
     func().parse(`
 fn main() {
     print(1);
-}
-`),
+}`),
     Result.ok({
       src: "",
       value: new Function(
         new Ident("main"),
         [],
-        new Block([new ExprStmt(new Number("1"))]),
+        new Block([
+          new ExprStmt(new Call(new Ident("print"), [new Number("1")])),
+        ]),
       ),
     }),
   );
@@ -253,4 +257,40 @@ Deno.test("parse block", () => {
       ]),
     }),
   );
+});
+
+Deno.test("parse return", () => {
+  {
+    const input = "return 1 + 1;";
+    const result = returnStmt().parse(input);
+    assertEquals(
+      result,
+      Result.ok({
+        src: "",
+        value: new ReturnStmt(
+          Option.some(new Binary(new Add(), new Number("1"), new Number("1"))),
+        ),
+      }),
+    );
+  }
+  {
+    const input = "fn add(x, y) {\n  return x + y;\n}";
+    const result = parse(input);
+    assertEquals(
+      result,
+      Result.ok([
+        new Function(
+          new Ident("add"),
+          [new Ident("x"), new Ident("y")],
+          new Block([
+            new ReturnStmt(
+              Option.some(
+                new Binary(new Add(), new Ident("x"), new Ident("y")),
+              ),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
 });

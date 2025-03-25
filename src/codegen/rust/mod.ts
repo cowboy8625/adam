@@ -17,6 +17,7 @@ import {
   Mul,
   Number,
   Op,
+  ReturnStmt,
   Statement,
   StringLiteral,
   Sub,
@@ -33,6 +34,7 @@ export interface AstVisitor {
   visitBlock(node: Block): string;
   visitLet(node: Let): string;
   visitExprStmt(node: ExprStmt): string;
+  visitReturnStmt(node: ReturnStmt): string;
   visitArray(node: Array): string;
   visitIfElse(node: IfElse): string;
   visitBinary(node: Binary): string;
@@ -101,6 +103,14 @@ export class Compiler implements AstVisitor {
     return `${expr};`;
   }
 
+  visitReturnStmt(node: ReturnStmt): string {
+    if (node.expression.isNone()) {
+      return "return;";
+    }
+    const expr = this.visit(node.expression.unwrap());
+    return `return ${expr};`;
+  }
+
   visitArray(_: Array): string {
     std.unimplemented("Array code gen not unimplemented yet");
   }
@@ -134,7 +144,7 @@ export class Compiler implements AstVisitor {
         .join(", ")})`;
     }
     const args = node.args.map((arg) => this.visit(arg)).join(", ");
-    return `${name}(${args})`;
+    return `${name}(vec![${args}])`;
   }
 
   visitStringLiteral(node: StringLiteral): string {
@@ -171,6 +181,8 @@ export class Compiler implements AstVisitor {
       return this.visitLet(node);
     } else if (node instanceof ExprStmt) {
       return this.visitExprStmt(node);
+    } else if (node instanceof ReturnStmt) {
+      return this.visitReturnStmt(node);
     } else if (node instanceof IfElse) {
       return this.visitIfElse(node);
     } else if (node instanceof Binary) {
@@ -197,7 +209,7 @@ export class Compiler implements AstVisitor {
       return this.visitOp(node);
     }
     const nodeName = ((node) => {
-      return node.constructor.name;
+      return node?.constructor?.name || "unknown";
     })(node as unknown as Function | Block | Statement | Expression | Op);
     std.unimplemented(`create a visit method for ${nodeName} visit`);
   }

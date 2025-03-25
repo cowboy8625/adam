@@ -1,9 +1,8 @@
+import Option from "./../utils/option.ts";
 import { AstVisitor, Compile } from "./../codegen/rust/mod.ts";
 
-("Hello world \0");
-
 export type Declaration = Function;
-export type Statement = ExprStmt;
+export type Statement = ExprStmt | ReturnStmt;
 export type Expression =
   | Let
   | Array
@@ -74,6 +73,17 @@ export class ExprStmt implements Compile {
   expression: Expression;
   constructor(expression: Expression) {
     this.expression = expression;
+  }
+
+  accept(visitor: AstVisitor): string {
+    return visitor.visit(this);
+  }
+}
+
+export class ReturnStmt implements Compile {
+  expression: Option<Expression>;
+  constructor(maybeExpression: Option<Expression>) {
+    this.expression = maybeExpression;
   }
 
   accept(visitor: AstVisitor): string {
