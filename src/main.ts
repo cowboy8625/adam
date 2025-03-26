@@ -48,6 +48,12 @@ function displayAstDebug(flag: boolean) {
   };
 }
 
+function newFilePath(oldFilePath: string, newExtension: string): string {
+  const path = oldFilePath.split(".");
+  path[path.length - 1] = newExtension;
+  return path.join(".");
+}
+
 async function main() {
   if (!isRustcInstalled) {
     console.error("rustc is not installed");
@@ -60,7 +66,14 @@ async function main() {
   const showAstDebug = Deno.args.some(
     (arg) => arg === "--ast-debug" || arg === "-ad",
   );
-  const filePath = Deno.args[1];
+
+  const filePath = Deno.args[Deno.args.length - 1];
+
+  if (!filePath.endsWith(".adam")) {
+    console.error("Please provide a .adam file as an argument");
+    Deno.exit(1);
+  }
+
   const objectFile = (await openFile("object.rs")).expect(
     "failed to open object.rs",
   );
@@ -86,7 +99,7 @@ async function main() {
       if (!content.length)
         code = "// Default when empty\nfn main() {\n" + content + "\n}\n";
       return writeToFile(
-        "test.rs",
+        newFilePath(filePath, "rs"),
         `${objectFile}\n// ----------\n${code}\n//-------------`,
       ).mapErr((e) => [e]);
     });
@@ -94,7 +107,27 @@ async function main() {
     console.error(result.error);
     Deno.exit(1);
   }
+
+  const command = new Deno.Command("rustc", {
+    args: ["-o", filePath.split(".")[0], newFilePath(filePath, "rs")],
+  });
+  const { success, stderr } = command.outputSync();
+  if (!success) {
+    console.error("Compilation failed with stderr:\n", stderr);
+    Deno.exit(1);
+  }
+
   console.log("Compilation successful");
+
+  if (Deno.args.includes("run")) {
+    console.log("Running", filePath.split(".")[0]);
+    const command = new Deno.Command(`./${filePath.split(".")[0]}`, {
+      args: [],
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    command.outputSync();
+  }
 }
 
 await main();
